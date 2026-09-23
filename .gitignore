@@ -1,0 +1,21 @@
+# secrets
+.env
+# data and outputs
+data/input/*
+data/runs/*
+!data/**/.gitkeep
+video/out/
+# python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# node
+node_modules/
+.remotion/
+# os / editors
+.DS_Store
+.idea/
+.vscode/
