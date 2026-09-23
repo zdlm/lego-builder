@@ -37,6 +37,8 @@ Image paths inside JSON are relative to the run directory. Music and SFX paths a
 
 ## Stages
 
+Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which runs the Claude Code CLI (`claude -p --output-format json --allowedTools Read`) on the owner's Claude subscription. Images are passed as file paths that Claude opens with its Read tool. See ADR 0002.
+
 | Stage | Job | Uses Claude? | Status |
 |---|---|---|---|
 | s01_extract | Rasterise PDF, find and crop each numbered step | Yes (segmentation) | Scaffolded |

@@ -11,6 +11,7 @@ pipeline/.venv/bin/pip install -e "pipeline[dev]"
 echo "==> Remotion video"
 (cd video && npm install)
 
-[ -f .env ] || { cp .env.example .env; echo "Created .env — add your ANTHROPIC_API_KEY"; }
+[ -f .env ] || { cp .env.example .env; echo "Created .env"; }
+command -v claude >/dev/null || echo "Note: Claude Code CLI not found — install it and run \`claude\` once to sign in with your Claude subscription"
 command -v ffmpeg >/dev/null || echo "Note: ffmpeg not found (brew install ffmpeg) — needed for audio handling"
 echo "Done."
