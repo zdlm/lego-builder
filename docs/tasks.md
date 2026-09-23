@@ -9,9 +9,7 @@ Claim a task by writing your name or model and the date in the **Owner** column 
 | 1 | Pick the demo LEGO set and put its PDF in `data/input/` | – | |
 | 2 | Add royalty-free music to `assets/music/` and 3–5 click SFX to `assets/sfx/` (log licences in `assets/README.md`) | assets | |
 | 3 | Test `segment_page` prompt on the demo PDF; fix bounding boxes | pipeline/s01 | |
-| 4 | Align consecutive step images before diffing (ORB + homography) | pipeline/s02 | |
 | 5 | Tune `score_step` weights by watching output | pipeline/s03 | |
-| 6 | Scale cutout position to displayed size in `SnapStep` | video | |
 | 7 | Hook and Reveal visual polish; brand fonts | video | |
 | 8 | Export 15 / 30 / 60 s in one command | build | |
 | 9 | (Nice) 3D renderer replacing s04 (Blender + LDraw) | pipeline/s04 | |
@@ -28,3 +26,5 @@ Claim a task by writing your name or model and the date in the **Owner** column 
 | # | Task | Owner |
 |---|---|---|
 | 0 | Project scaffold, docs and data contracts | claude 2026-09-23 |
+| 4 | Align consecutive step images before diffing (ORB + homography) | copilot 2026-09-23 |
+| 6 | Scale cutout position to displayed size in `SnapStep` | copilot 2026-09-23 |

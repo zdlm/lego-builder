@@ -35,6 +35,8 @@ def make_cutout(image: Path, mask: Path, out: Path) -> BBox | None:
 
 
 def run(ctx: StageContext) -> None:
+    import cv2
+
     paths = ctx.paths.ensure()
     raw = {s.step_number: s for s in read_model(paths.steps_raw, StepsRaw).steps}
     und = {u.step_number: u for u in read_model(paths.understanding, Understanding).steps}
@@ -46,16 +48,22 @@ def run(ctx: StageContext) -> None:
         n = s.step_number
         idx = order.index(n)
         prev_img = raw[order[idx - 1]].image if idx > 0 else raw[n].image
+        base_h, base_w = cv2.imread(str(paths.root / prev_img)).shape[:2]
         cutout, bbox = None, None
         mask = und[n].diff_mask if n in und else None
         if mask:
+            # aligned_image (if present) is warped onto prev_img's frame, matching the mask and
+            # keeping cutout_bbox in the same coordinate space as base_image.
+            source = und[n].aligned_image or raw[n].image
             out = paths.assets_dir / f"cutout_{n:03d}.png"
-            bbox = make_cutout(paths.root / raw[n].image, paths.root / mask, out)
+            bbox = make_cutout(paths.root / source, paths.root / mask, out)
             cutout = str(out.relative_to(paths.root)) if bbox else None
         assets.append(
             StepAsset(
                 step_number=n,
                 base_image=prev_img,
+                base_width=base_w,
+                base_height=base_h,
                 full_image=raw[n].image,
                 cutout=cutout,
                 cutout_bbox=bbox,

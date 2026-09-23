@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 
 
 class BBox(BaseModel):
@@ -56,6 +56,13 @@ class StepUnderstanding(BaseModel):
     note: str = Field(default="", description="One-line description of what happens")
     diff_mask: str | None = Field(default=None, description="Path to mask of newly added region")
     diff_area: float | None = Field(default=None, ge=0, le=1, description="Fraction of pixels")
+    aligned_image: str | None = Field(
+        default=None,
+        description=(
+            "This step's image warped onto the previous step's coordinate frame (ORB + "
+            "homography), so diff_mask/cutouts line up with the previous step's pixels"
+        ),
+    )
 
 
 class Understanding(BaseModel):
@@ -85,9 +92,13 @@ class Selection(BaseModel):
 class StepAsset(BaseModel):
     step_number: int
     base_image: str = Field(description="Previous-step image the part drops onto")
+    base_width: int = Field(description="Pixel width of base_image, for scaling cutout_bbox")
+    base_height: int = Field(description="Pixel height of base_image, for scaling cutout_bbox")
     full_image: str = Field(description="This step's full image (end state)")
     cutout: str | None = Field(default=None, description="RGBA cutout of the new parts")
-    cutout_bbox: BBox | None = None
+    cutout_bbox: BBox | None = Field(
+        default=None, description="In base_image's pixel coordinate frame"
+    )
 
 
 class Assets(BaseModel):

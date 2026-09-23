@@ -42,7 +42,7 @@ Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which r
 | Stage | Job | Uses Claude? | Status |
 |---|---|---|---|
 | s01_extract | Rasterise PDF, find and crop each numbered step | Yes (segmentation) | Scaffolded |
-| s02_understand | New parts, visual change, milestone; OpenCV diff mask | Yes | Scaffolded; mask needs image alignment |
+| s02_understand | New parts, visual change, milestone; OpenCV diff mask | Yes | Implemented (ORB + homography alignment) |
 | s03_select | Satisfaction score + pick N steps with pacing; optional Claude re-rank | Optional | Heuristic implemented + tested |
 | s04_assets | RGBA cutouts of new parts for the 2D drop animation | No | Scaffolded |
 | s05_beats | Beat detection with librosa | No | Implemented; downbeats approximate |

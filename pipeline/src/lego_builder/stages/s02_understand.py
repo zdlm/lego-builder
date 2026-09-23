@@ -7,26 +7,56 @@ Outputs: 02_understanding.json (Understanding), 02_masks/mask_NNN.png
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from lego_builder.jsonio import read_model, write_model
 from lego_builder.llm.client import ask_json, load_prompt
 from lego_builder.models import StepsRaw, StepUnderstanding, Understanding
 from lego_builder.stages.base import StageContext
 
+MIN_MATCHES = 10
 
-def diff_mask(prev_img: Path, img: Path, out: Path) -> float:
-    """Write a binary mask of pixels that changed between two step images; return changed fraction.
 
-    TODO: align the two images first (ORB feature matching + homography), because camera
-    angle and scale can change between steps. Without alignment the mask is noisy.
+def align_image(prev_img: Path, cur_img: Path) -> Any | None:
+    """Warp the current step image onto the previous step's coordinate frame (ORB + homography).
+
+    Camera angle and scale can drift between consecutive instruction pages; without alignment
+    the diff mask (and anything cropped from it) would not line up with the previous image's
+    pixels. Returns None if there aren't enough good matches for a reliable homography.
     """
     import cv2
     import numpy as np
 
-    a = cv2.imread(str(prev_img))
-    b = cv2.imread(str(img))
-    a = cv2.resize(a, (b.shape[1], b.shape[0]))
-    diff = cv2.cvtColor(cv2.absdiff(a, b), cv2.COLOR_BGR2GRAY)
+    prev = cv2.imread(str(prev_img))
+    cur = cv2.imread(str(cur_img))
+    orb = cv2.ORB_create(nfeatures=2000)
+    kp1, des1 = orb.detectAndCompute(prev, None)
+    kp2, des2 = orb.detectAndCompute(cur, None)
+    if des1 is None or des2 is None or len(kp1) < MIN_MATCHES or len(kp2) < MIN_MATCHES:
+        return None
+
+    matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+    matches = matcher.knnMatch(des2, des1, k=2)
+    good = [m for m, n in matches if m.distance < 0.75 * n.distance]
+    if len(good) < MIN_MATCHES:
+        return None
+
+    src = np.float32([kp2[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+    dst = np.float32([kp1[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    h_mat, inliers = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+    if h_mat is None or inliers is None or int(inliers.sum()) < MIN_MATCHES:
+        return None
+
+    h, w = prev.shape[:2]
+    return cv2.warpPerspective(cur, h_mat, (w, h))
+
+
+def diff_mask(prev: Any, cur: Any, out: Path) -> float:
+    """Write a mask of pixels changed between two same-sized images; return the changed fraction."""
+    import cv2
+    import numpy as np
+
+    diff = cv2.cvtColor(cv2.absdiff(prev, cur), cv2.COLOR_BGR2GRAY)
     _, mask = cv2.threshold(diff, 40, 255, cv2.THRESH_BINARY)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     cv2.imwrite(str(out), mask)
@@ -34,6 +64,8 @@ def diff_mask(prev_img: Path, img: Path, out: Path) -> float:
 
 
 def run(ctx: StageContext) -> None:
+    import cv2
+
     paths = ctx.paths.ensure()
     raw = read_model(paths.steps_raw, StepsRaw)
     results: list[StepUnderstanding] = []
@@ -51,8 +83,19 @@ def run(ctx: StageContext) -> None:
             StepUnderstanding,
         )
         if prev is not None:
+            prev_path = paths.root / prev.image
+            aligned = align_image(prev_path, cur_img)
+            if aligned is None:
+                prev_arr = cv2.imread(str(prev_path))
+                cur_arr = cv2.imread(str(cur_img))
+                aligned = cv2.resize(cur_arr, (prev_arr.shape[1], prev_arr.shape[0]))
+            else:
+                aligned_path = paths.masks_dir / f"aligned_{cur.step_number:03d}.png"
+                cv2.imwrite(str(aligned_path), aligned)
+                u.aligned_image = str(aligned_path.relative_to(paths.root))
+
             mask = paths.masks_dir / f"mask_{cur.step_number:03d}.png"
-            u.diff_area = diff_mask(paths.root / prev.image, cur_img, mask)
+            u.diff_area = diff_mask(cv2.imread(str(prev_path)), aligned, mask)
             u.diff_mask = str(mask.relative_to(paths.root))
         results.append(u)
 

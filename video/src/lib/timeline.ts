@@ -2,16 +2,18 @@
 // Keep in sync: if you change one, change the other and bump SCHEMA_VERSION.
 import { staticFile } from "remotion";
 
-export const SCHEMA_VERSION = "0.1.0";
+export const SCHEMA_VERSION = "0.2.0";
 
 export type BBox = { x: number; y: number; w: number; h: number };
 
 export type StepAsset = {
   step_number: number;
   base_image: string; // relative to the run dir
+  base_width: number; // native pixel size of base_image, for scaling cutout_bbox
+  base_height: number;
   full_image: string;
   cutout: string | null;
-  cutout_bbox: BBox | null;
+  cutout_bbox: BBox | null; // in base_image's pixel coordinate frame
 };
 
 export type TimelineEvent = {
