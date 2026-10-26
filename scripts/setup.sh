@@ -3,8 +3,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "==> Python pipeline"
-python3 -m venv pipeline/.venv
+PY=""
+for c in python3.13 python3.12 python3.11 python3.10 python3; do
+  if command -v "$c" >/dev/null && "$c" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then PY="$c"; break; fi
+done
+[ -n "$PY" ] || { echo "Python >= 3.10 required (try: brew install python@3.12)"; exit 1; }
+
+echo "==> Python pipeline ($PY)"
+"$PY" -m venv pipeline/.venv
 pipeline/.venv/bin/pip install --upgrade pip
 pipeline/.venv/bin/pip install -e "pipeline[dev]"
 

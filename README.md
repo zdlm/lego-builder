@@ -2,6 +2,13 @@
 
 Turn a LEGO building-instruction PDF into a beat-synced, vertical short video for social media: bricks snap into place on the beat, and the finished model is revealed at the end.
 
+## Prerequisites
+
+- Python ≥ 3.10 (macOS ships 3.9; install a newer one with Homebrew or mise)
+- Node ≥ 18
+- ffmpeg (`brew install ffmpeg`)
+- Claude Code CLI, signed in (see below)
+
 ## Quick start
 
 ```bash
@@ -30,4 +37,4 @@ Each step image is one Claude call, so a 100-step manual uses roughly 100–150 
 - `video/` — Remotion (React). Renders the timeline into MP4 videos.
 - `docs/` — plan, architecture, data contracts, task board, decision records.
 
-Contributors and AI agents: start with [AGENTS.md](AGENTS.md).
+Contributors and AI agents: start with [AGENTS.md](AGENTS.md), then [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/tasks.md](docs/tasks.md). Recipes and debugging tips: [docs/dev-guide.md](docs/dev-guide.md).

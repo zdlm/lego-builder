@@ -8,6 +8,16 @@ LEGO Builder turns a LEGO building-instruction PDF into a vertical (9:16), beat-
 
 Full product plan: `docs/plan.md`. Architecture: `docs/architecture.md`. Data contracts: `docs/data-contracts.md`.
 
+## Reading order for a new agent or contributor
+
+1. This file (rules).
+2. `docs/architecture.md`, `docs/data-contracts.md`, `docs/glossary.md`.
+3. `docs/tasks.md` (what is open, what is claimed) and `CONTRIBUTING.md` (how we work in parallel: branches, claiming, handoff).
+4. `docs/dev-guide.md` (recipes: change/add a stage, change a contract, edit prompts, work on video, debugging).
+5. The module notes for the area you will touch: `pipeline/AGENTS.md` or `video/AGENTS.md`.
+
+Agent tool entry points: `CLAUDE.md` (Claude Code), `GEMINI.md` (Gemini), `.github/copilot-instructions.md` (Copilot). All of them point back here.
+
 ## Repository layout
 
 ```
@@ -15,6 +25,9 @@ lego-builder/
 ├── AGENTS.md              ← you are here (rules for agents)
 ├── CLAUDE.md              ← imports AGENTS.md
 ├── README.md              ← human quick start
+├── CONTRIBUTING.md        ← how we work in parallel (branches, claiming, handoff, DoD)
+├── GEMINI.md              ← imports pointer to AGENTS.md
+├── .github/               ← Copilot instructions, PR template
 ├── Makefile               ← all common commands
 ├── .env.example           ← required environment variables
 ├── docs/
@@ -22,6 +35,8 @@ lego-builder/
 │   ├── architecture.md    ← pipeline design and module boundaries
 │   ├── data-contracts.md  ← JSON files passed between stages
 │   ├── tasks.md           ← shared task board (claim tasks here)
+│   ├── dev-guide.md       ← recipes and debugging checklist
+│   ├── glossary.md        ← project vocabulary
 │   └── decisions/         ← architecture decision records (ADRs)
 ├── pipeline/              ← Python: PDF → timeline.json
 │   ├── pyproject.toml
@@ -64,7 +79,7 @@ The Python side decides *what* happens and *when*. The Remotion side decides onl
 ## Rules for agents
 
 1. **Read before writing.** Check `docs/tasks.md` for what is in progress, and read the modules you will touch.
-2. **Claim your task.** Before starting, add your name/model and the date next to the task in `docs/tasks.md`. Mark it done when finished. Don't work on a task someone else has claimed.
+2. **Claim your task.** Before starting, add your name/model and the date next to the task in `docs/tasks.md`. Mark it done when finished. Don't work on a task someone else has claimed. If you stop early, leave a handoff note (see `CONTRIBUTING.md`).
 3. **Stay in your lane.** Keep changes inside the module or stage you are working on. If you need to change a data contract, see rule 4.
 4. **Data contracts are shared.** `models.py` is the source of truth. If you change a model: update `docs/data-contracts.md`, update the mirrored TypeScript types in `video/src/lib/timeline.ts`, bump `SCHEMA_VERSION` in `models.py`, and note it in your commit message.
 5. **Stages are pure and re-runnable.** A stage reads its inputs from the run directory, writes its outputs there, and can be re-run without side effects. No hidden global state.
