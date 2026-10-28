@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "0.4.0"
+SCHEMA_VERSION = "0.5.0"
 
 
 class BBox(BaseModel):
@@ -159,6 +159,9 @@ class TimelineEvent(BaseModel):
         description="Snap only: when the parts land (on a beat), in video time",
     )
     sfx: str | None = Field(default=None, description="Path of the click sound to play")
+    sfx_lead_s: float = Field(
+        default=0.0, ge=0, description="Silence at the start of `sfx`; start it this much early"
+    )
     text: str | None = None
 
 

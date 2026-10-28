@@ -42,9 +42,13 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
   const impact = Math.max(0, Math.round(((event.impact_s ?? event.start_s) - event.start_s) * fps));
   const landed = frame >= impact;
   const k = frame - impact;
+  // Start the click early by its leading silence so the audible "click" is on the beat.
+  const sfxFrom = impact - Math.round(event.sfx_lead_s * fps);
+  // The same click every step: vary the level a little so it doesn't sound mechanical.
+  const sfxVolume = 0.8 + 0.1 * ((event.step_number ?? 0) % 3);
   const sfx = event.sfx ? (
-    <Sequence from={impact}>
-      <Audio src={assetFile(event.sfx)} />
+    <Sequence from={Math.max(0, sfxFrom)}>
+      <Audio src={assetFile(event.sfx)} trimBefore={Math.max(0, -sfxFrom)} volume={sfxVolume} />
     </Sequence>
   ) : null;
 

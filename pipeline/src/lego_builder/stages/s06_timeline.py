@@ -42,6 +42,18 @@ def music_offset(beats: Beats, length_s: int) -> float:
     return round(max(0.0, min(first - HOOK_S, beats.duration_s - length_s)), 3)
 
 
+def sound_onset(path: str) -> float:
+    """Seconds of near-silence before a sound effect actually starts."""
+    import librosa
+    import numpy as np
+
+    y, sr = librosa.load(path, sr=None, mono=True)
+    if len(y) == 0:
+        return 0.0
+    loud = np.nonzero(np.abs(y) > 0.1 * np.abs(y).max())[0]
+    return round(float(loud[0]) / sr, 3) if len(loud) else 0.0
+
+
 def fit_to_beats(snaps: list[SelectedStep], slots: list[float]) -> list[tuple[float, SelectedStep]]:
     """Give each snap a beat, in order, using up the snap window.
 
@@ -81,6 +93,7 @@ def build_timeline(
     total_steps: int,
     final_image: str | None = None,
     cta_text: str = "Ready to build it?",
+    sfx_leads: dict[str, float] | None = None,
 ) -> Timeline:
     by_step = {a.step_number: a for a in assets.assets}
     snap_window_end = length_s - END_S
@@ -116,6 +129,7 @@ def build_timeline(
 
     for k, (impact, s) in enumerate(placed):
         end = starts[k + 1] if k + 1 < len(placed) else snap_window_end
+        click = sfx[k % len(sfx)] if sfx else None
         events.append(
             TimelineEvent(
                 kind="snap",
@@ -124,7 +138,8 @@ def build_timeline(
                 impact_s=impact,
                 step_number=s.step_number,
                 asset=by_step.get(s.step_number),
-                sfx=sfx[k % len(sfx)] if sfx else None,
+                sfx=click,
+                sfx_lead_s=(sfx_leads or {}).get(click, 0.0) if click else 0.0,
             )
         )
 
@@ -167,6 +182,7 @@ def run(ctx: StageContext) -> None:
 
     paths = ctx.paths
     raw = read_model(paths.steps_raw, StepsRaw)
+    sfx = [str(p) for p in ctx.sfx]
     timeline = build_timeline(
         run_id=ctx.run_id,
         set_name=ctx.set_name,
@@ -175,9 +191,10 @@ def run(ctx: StageContext) -> None:
         selection=read_model(paths.selection, Selection),
         assets=read_model(paths.assets, Assets),
         beats=read_model(paths.beats, Beats),
-        sfx=[str(p) for p in ctx.sfx],
+        sfx=sfx,
         total_steps=len(raw.steps),
         final_image=raw.final_image,
         cta_text=ctx.cta_text,
+        sfx_leads={s: sound_onset(s) for s in sfx},
     )
     write_model(paths.timeline, timeline)

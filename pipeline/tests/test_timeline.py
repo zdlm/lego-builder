@@ -1,5 +1,41 @@
+from pathlib import Path
+
 from lego_builder.models import Assets, Beats, SelectedStep, Selection
-from lego_builder.stages.s06_timeline import build_timeline
+from lego_builder.stages.s06_timeline import build_timeline, sound_onset
+
+
+def test_single_click_is_used_for_every_snap_with_its_lead(tmp_path: Path) -> None:
+    import numpy as np
+    import soundfile as sf
+
+    click = tmp_path / "click.wav"
+    sr = 16000
+    y = np.zeros(sr // 2, dtype=np.float32)
+    y[int(0.114 * sr) : int(0.124 * sr)] = 0.6
+    sf.write(click, y, sr)
+    assert abs(sound_onset(str(click)) - 0.114) < 0.002
+
+    beats = Beats(music="m.mp3", tempo_bpm=120, duration_s=40, beats_s=[i * 0.5 for i in range(80)])
+    sel = Selection(
+        target_length_s=15,
+        selected=[
+            SelectedStep(step_number=i, score=0.5, reason="", role="build") for i in range(6)
+        ],
+    )
+    t = build_timeline(
+        "r",
+        "Set",
+        None,
+        15,
+        sel,
+        Assets(assets=[]),
+        beats,
+        [str(click)],
+        6,
+        sfx_leads={str(click): 0.114},
+    )
+    snaps = [e for e in t.events if e.kind == "snap"]
+    assert snaps and all(e.sfx == str(click) and e.sfx_lead_s == 0.114 for e in snaps)
 
 
 def test_snaps_land_on_beats_and_fit_length() -> None:

@@ -2,7 +2,7 @@
 // Keep in sync: if you change one, change the other and bump SCHEMA_VERSION.
 import { staticFile } from "remotion";
 
-export const SCHEMA_VERSION = "0.4.0";
+export const SCHEMA_VERSION = "0.5.0";
 
 export type BBox = { x: number; y: number; w: number; h: number };
 
@@ -27,6 +27,7 @@ export type TimelineEvent = {
   asset: StepAsset | null;
   impact_s: number | null; // snap only: when the parts land (on a beat), video time
   sfx: string | null; // repo-relative, e.g. assets/sfx/click1.wav
+  sfx_lead_s: number; // silence at the start of sfx; start it this much before impact_s
   text: string | null;
 };
 
@@ -68,5 +69,5 @@ export const sampleTimeline: Timeline = {
   total_steps: 0,
   final_image: null,
   final_model: null,
-  events: [{ kind: "cta", start_s: 0, duration_s: 15, step_number: null, asset: null, impact_s: null, sfx: null, text: "Load a run: make preview RUN=<run_id>" }],
+  events: [{ kind: "cta", start_s: 0, duration_s: 15, step_number: null, asset: null, impact_s: null, sfx: null, sfx_lead_s: 0, text: "Load a run: make preview RUN=<run_id>" }],
 };
