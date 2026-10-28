@@ -25,7 +25,8 @@ from lego_builder.stages.base import StageContext
 Role = Literal["hook", "build", "climax", "reveal"]
 
 # How many snap steps each video length holds (tuned by eye; s06 fits them to the beats).
-TARGET_COUNTS: dict[int, int] = {15: 10, 30: 22, 60: 45}
+# Roughly one snap per beat at ~85-170 BPM in the snap window; s06 drops extras that don't fit.
+TARGET_COUNTS: dict[int, int] = {15: 12, 30: 28, 60: 60}
 
 MILESTONE_BONUS: dict[str, float] = {
     "final": 0.5,
@@ -85,13 +86,9 @@ def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
         )
     ]
     for i, u in enumerate(chosen):
-        role: Role = (
-            "reveal" if u is final else ("climax" if i >= climax_from else "build")
-        )
+        role: Role = "reveal" if u is final else ("climax" if i >= climax_from else "build")
         out.append(
-            SelectedStep(
-                step_number=u.step_number, score=score_step(u), reason=u.note, role=role
-            )
+            SelectedStep(step_number=u.step_number, score=score_step(u), reason=u.note, role=role)
         )
     return out
 

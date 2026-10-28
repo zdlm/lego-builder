@@ -17,6 +17,9 @@ MIN_OVERLAP = 0.3  # a piece joins a box only if this share of it is already ins
 PAD_PX = 8
 MIN_PIECE = 0.02  # specks smaller than this share of the biggest piece are dropped
 MIN_PART = 0.15  # callout pieces smaller than this share of the biggest are count labels ("2x")
+MIN_PART_PX = 20  # ... and parts smaller than this on either side are specks
+MAX_GAP = 0.005  # enclosed background areas above this share of the image are not part gaps
+DETACH_PX = 9  # thin lines (arrows) narrower than this are cut to separate drawings
 
 
 def background(img: Any, edge_only: bool = True) -> Any:
@@ -78,19 +81,22 @@ def expand_to_content(img: Any, bbox: BBox, clip_footer: bool = True) -> BBox:
 
 
 def transparent_background(img: Any, largest_only: bool = False) -> Any:
-    """BGRA copy of `img` where background regions connected to the edge are transparent.
+    """BGRA copy of `img` with background-coloured areas transparent.
 
-    Background-coloured gaps fully enclosed by the drawing stay opaque, so light parts are safe.
+    Small background-coloured gaps fully enclosed by the drawing stay opaque, so light parts are
+    safe; large enclosed areas (e.g. between arrows and the model) are cleared.
     """
     import cv2
     import numpy as np
 
     fg = foreground(img, background(img))
-    _, labels = cv2.connectedComponents((1 - fg).astype(np.uint8), connectivity=4)
-    edge = np.unique(
-        np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]])
+    n_bg, labels, bg_stats, _ = cv2.connectedComponentsWithStats(
+        (1 - fg).astype(np.uint8), connectivity=4
     )
-    alpha = np.where(np.isin(labels, edge) & (fg == 0), 0, 255).astype(np.uint8)
+    edge = set(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]).tolist())
+    big = MAX_GAP * labels.size
+    clear = [i for i in range(1, n_bg) if i in edge or bg_stats[i, cv2.CC_STAT_AREA] >= big]
+    alpha = np.where(np.isin(labels, clear) & (fg == 0), 0, 255).astype(np.uint8)
 
     n, pieces, stats, _ = cv2.connectedComponentsWithStats((alpha > 0).astype(np.uint8))
     if n > 1:
@@ -117,21 +123,43 @@ def trim(rgba: Any) -> tuple[Any, int, int] | None:
     return rgba[y0 : int(ys.max()) + 1, x0 : int(xs.max()) + 1], x0, y0
 
 
+def keep_main_drawing(rgba: Any, focus: BBox) -> Any:
+    """Keep only the drawing that best covers `focus`; arrows and callouts touching it are cut."""
+    import cv2
+    import numpy as np
+
+    alpha = rgba[:, :, 3]
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (DETACH_PX, DETACH_PX))
+    solid = cv2.morphologyEx((alpha > 0).astype(np.uint8), cv2.MORPH_OPEN, kernel)
+    n, labels = cv2.connectedComponents(solid)
+    if n <= 1:
+        return rgba
+    window = labels[focus.y : focus.y + focus.h, focus.x : focus.x + focus.w]
+    counts = np.bincount(window.ravel(), minlength=n)[1:]
+    main = int(counts.argmax()) + 1 if counts.max() > 0 else 1
+    near = cv2.dilate((labels == main).astype(np.uint8), kernel)
+    out = rgba.copy()
+    out[:, :, 3] = np.where(near > 0, alpha, 0)
+    return out
+
+
 def cut_model(img: Any, box: BBox | None) -> tuple[Any, int, int] | None:
     """Cut the model inside `box` (or the biggest drawing in `img`) with a transparent background.
 
     Returns (BGRA image, x, y) where x, y is the cut-out's top-left corner in `img`.
     """
     if box is None:
-        return trim(transparent_background(img, largest_only=True))
-    box = expand_to_content(img, box, clip_footer=False)
-    found = trim(
-        transparent_background(img[box.y : box.y + box.h, box.x : box.x + box.w])
-    )
+        rgba = transparent_background(img, largest_only=True)
+        h, w = img.shape[:2]
+        return trim(keep_main_drawing(rgba, BBox(x=0, y=0, w=w, h=h)))
+    area = expand_to_content(img, box, clip_footer=False)
+    rgba = transparent_background(img[area.y : area.y + area.h, area.x : area.x + area.w])
+    focus = BBox(x=box.x - area.x, y=box.y - area.y, w=box.w, h=box.h)
+    found = trim(keep_main_drawing(rgba, focus))
     if found is None:
         return None
     rgba, dx, dy = found
-    return rgba, box.x + dx, box.y + dy
+    return rgba, area.x + dx, area.y + dy
 
 
 def cut_parts(img: Any, box: BBox) -> list[Any]:
@@ -145,9 +173,7 @@ def cut_parts(img: Any, box: BBox) -> list[Any]:
     grouped = cv2.dilate(fg, np.ones((7, 7), np.uint8))
     n, labels, stats, _ = cv2.connectedComponentsWithStats(grouped)
     h, w = labels.shape
-    edge = set(
-        np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]).tolist()
-    )
+    edge = set(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]).tolist())
     pieces = [i for i in range(1, n) if i not in edge]
     if not pieces:
         return []
@@ -161,6 +187,6 @@ def cut_parts(img: Any, box: BBox) -> list[Any]:
         x0, y0 = max(x - 2, 0), max(y - 2, 0)
         crop = inner[y0 : min(y + ph + 2, h), x0 : min(x + pw + 2, w)]
         found = trim(transparent_background(crop, largest_only=True))
-        if found is not None:
+        if found is not None and min(found[0].shape[:2]) >= MIN_PART_PX:
             parts.append(found[0])
     return parts

@@ -55,9 +55,9 @@ Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which r
 | Event | Component | Effect |
 |---|---|---|
 | hook | `Hook` | Punch-in on the finished model |
-| snap | `SnapStep` | New parts fall onto the previous model; on the beat, cut to the new model with squash, ring burst, shake, click SFX |
+| snap | `SnapStep` | New parts fall onto the previous model; on the beat, cut to the new model with squash, ring burst, shake, click SFX. The camera (`lib/stage.ts`) starts close on the small early model and only pulls back as it grows |
 | reveal | `Reveal` | Finished model with a glow, set name and number |
-| cta | `Cta` | Call to action card |
+| cta | `Cta` | Finished model, call-to-action text (`--cta-text`), set name and number on a red card |
 | (always) | `Overlays` | Step counter and progress bar |
 
 `public/assets` and `public/runs` are symlinks created by `video/scripts/link-run.mjs`.

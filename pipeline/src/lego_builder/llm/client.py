@@ -9,6 +9,7 @@ Images are passed as file paths; Claude Code opens them with its read-only Read 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -87,21 +88,43 @@ def _run_cli(prompt: str, images: list[Path]) -> str:
     return str(envelope.get("result", ""))
 
 
+def _cache_path(prompt: str, images: list[Path]) -> Path | None:
+    """Where a validated reply for exactly this prompt, these image bytes and model is stored."""
+    settings = get_settings()
+    if not settings.claude_cache:
+        return None
+    h = hashlib.sha256(f"{settings.model}|{prompt}".encode())
+    for p in images:
+        h.update(hashlib.sha256(p.read_bytes()).digest())
+    return settings.data_dir / "cache" / "claude" / f"{h.hexdigest()}.txt"
+
+
 def ask_json(prompt: str, images: list[Path], schema: type[M], retries: int = 1) -> M:
     """Send prompt + images to Claude (via the CLI) and parse the reply into `schema`.
 
     Retries once with the validation error appended if the reply isn't valid JSON for the schema.
+    Valid replies are cached (see `_cache_path`), so re-running a stage on unchanged inputs makes
+    no Claude calls. Set LEGO_BUILDER_CLAUDE_CACHE=false to always ask again.
     """
     last_error: Exception | None = None
     attempt_prompt = prompt
     for _ in range(retries + 1):
-        text = _run_cli(attempt_prompt, images)
+        cache = _cache_path(attempt_prompt, images)
+        cached = cache is not None and cache.exists()
+        text = cache.read_text(encoding="utf-8") if cache and cached else ""
+        if not cached:
+            text = _run_cli(attempt_prompt, images)
         try:
-            return schema.model_validate(json.loads(_extract_json(text)))
+            reply = schema.model_validate(json.loads(_extract_json(text)))
         except (json.JSONDecodeError, ValidationError) as e:
             last_error = e
             attempt_prompt = (
                 f"{prompt}\n\nYour previous reply was not valid for the required JSON shape:\n"
                 f"{e}\nReply again with corrected JSON only."
             )
+            continue
+        if cache is not None and not cached:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(text, encoding="utf-8")
+        return reply
     raise ClaudeCLIError(f"Could not get valid JSON from Claude: {last_error}")

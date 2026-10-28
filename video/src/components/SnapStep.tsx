@@ -1,5 +1,5 @@
 import { AbsoluteFill, Audio, Easing, Img, interpolate, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
-import { MODEL_SHADOW, modelScale, standOnStage } from "../lib/stage";
+import { cameraScale, MODEL_SHADOW, standOnStage } from "../lib/stage";
 import { assetFile, runFile, type Picture, type Timeline } from "../lib/timeline";
 import type { EventProps } from "./types";
 
@@ -58,7 +58,9 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
     );
   }
 
-  const scale = modelScale(timeline);
+  const length = Math.max(1, Math.round(event.duration_s * fps));
+  const camera = interpolate(frame, [0, length], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const scale = cameraScale(timeline, event, camera);
   const { left, top } = standOnStage(a.model, scale);
   const target = {
     x: left + a.landing_x * a.model.width * scale,
@@ -83,7 +85,7 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
         ? a.parts.map((p, i) => {
           const spread = (i - (a.parts.length - 1) / 2) * 140;
           const startX = target.x + spread * 1.6;
-          const startY = -p.height * scale - 80 - i * 40;
+          const startY = target.y - 700 - i * 40;
           const x = startX + (target.x + spread * 0.3 - startX) * fall;
           const y = startY + (target.y - startY) * fall;
           const spin = (1 - fall) * (i % 2 === 0 ? -25 : 25);
@@ -97,6 +99,7 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
                 top: y - (p.height * scale) / 2,
                 width: p.width * scale,
                 height: p.height * scale,
+                opacity: Math.min(1, fall * 4),
                 transform: `rotate(${spin}deg)`,
                 filter: MODEL_SHADOW,
               }}

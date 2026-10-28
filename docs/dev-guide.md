@@ -11,6 +11,7 @@ Practical recipes. Rules are in [AGENTS.md](AGENTS.md); design is in [architectu
 ## Running without spending Claude usage
 
 - Unit tests never call Claude (`make test`).
+- Claude replies are cached in `data/cache/claude/` by prompt + image bytes + model, so re-running a stage on unchanged inputs is free. Changing a prompt or an image only re-asks the affected calls. Set `LEGO_BUILDER_CLAUDE_CACHE=false` to force fresh answers.
 - Re-run only the stage you are working on against an existing run: `make stage STAGE=s03_select RUN=<run_id>`. Earlier stages' outputs stay on disk.
 - For heuristics (s03, s05, s06), edit/copy a run's JSON by hand and re-run just that stage.
 - For the video side you only need a run's `06_timeline.json` plus the images it points to. Ask for a zipped run folder, unzip it into `data/runs/`, then `make preview RUN=<run_id>`.

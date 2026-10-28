@@ -25,6 +25,7 @@ def _ctx(
     length: int,
     sfx_dir: Path,
     no_llm_rank: bool,
+    cta_text: str,
 ) -> StageContext:
     sfx = sorted(sfx_dir.glob("*.wav")) + sorted(sfx_dir.glob("*.mp3")) if sfx_dir.exists() else []
     return StageContext(
@@ -37,6 +38,7 @@ def _ctx(
         length_s=length,  # type: ignore[arg-type]
         sfx=sfx,
         use_llm_ranking=not no_llm_rank,
+        cta_text=cta_text,
     )
 
 
@@ -50,10 +52,11 @@ def run(
     run_id: str | None = typer.Option(None, help="Defaults to <pdf-name>-<timestamp>"),
     sfx_dir: Path = typer.Option(Path("assets/sfx")),
     no_llm_rank: bool = typer.Option(False, help="Use heuristic selection only"),
+    cta_text: str = typer.Option("Ready to build it?", help="Call-to-action text at the end"),
 ) -> None:
     """Run every stage in order."""
     rid = run_id or f"{pdf.stem}-{datetime.now():%Y%m%d-%H%M%S}"
-    ctx = _ctx(rid, pdf, music, set_name, set_number, length, sfx_dir, no_llm_rank)
+    ctx = _ctx(rid, pdf, music, set_name, set_number, length, sfx_dir, no_llm_rank, cta_text)
     for name, fn in STAGES.items():
         typer.echo(f"==> {name}")
         fn(ctx)
@@ -71,11 +74,13 @@ def stage(
     length: int = typer.Option(30),
     sfx_dir: Path = typer.Option(Path("assets/sfx")),
     no_llm_rank: bool = typer.Option(False),
+    cta_text: str = typer.Option("Ready to build it?"),
 ) -> None:
     """Re-run a single stage on an existing run."""
     if name not in STAGES:
         raise typer.BadParameter(f"Unknown stage {name}")
-    STAGES[name](_ctx(run, pdf, music, set_name, set_number, length, sfx_dir, no_llm_rank))
+    ctx = _ctx(run, pdf, music, set_name, set_number, length, sfx_dir, no_llm_rank, cta_text)
+    STAGES[name](ctx)
 
 
 if __name__ == "__main__":

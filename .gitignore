@@ -3,6 +3,7 @@
 # data and outputs
 data/input/*
 data/runs/*
+data/cache/
 !data/**/.gitkeep
 video/out/
 # python

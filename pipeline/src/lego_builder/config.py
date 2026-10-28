@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     claude_bin: str = "claude"
     model: str = ""  # optional, e.g. "sonnet" or "opus"; empty = CLI default
     claude_timeout_s: int = 300
+    claude_cache: bool = True  # reuse validated replies for identical prompt + images
 
     data_dir: Path = Path("data")
     pdf_dpi: int = 200

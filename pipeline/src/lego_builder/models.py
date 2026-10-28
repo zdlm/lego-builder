@@ -37,9 +37,7 @@ class RawStep(BaseModel):
     step_number: int = Field(description="Step number as printed in the instructions")
     page: int = Field(description="1-based PDF page index")
     bbox: BBox = Field(description="Where the step sits on the page image")
-    image: str = Field(
-        description="Path to the cropped step image, relative to the run dir"
-    )
+    image: str = Field(description="Path to the cropped step image, relative to the run dir")
 
 
 class StepsRaw(BaseModel):
@@ -58,26 +56,15 @@ class StepsRaw(BaseModel):
 
 class StepUnderstanding(BaseModel):
     step_number: int
-    new_parts: list[str] = Field(
-        default_factory=list, description="e.g. '1x4 red plate x2'"
-    )
-    visual_change: float = Field(
-        ge=0, le=1, description="0 = barely visible, 1 = huge change"
-    )
-    is_milestone: bool = Field(
-        description="Shape comes together, sub-assemblies join, etc."
-    )
+    new_parts: list[str] = Field(default_factory=list, description="e.g. '1x4 red plate x2'")
+    visual_change: float = Field(ge=0, le=1, description="0 = barely visible, 1 = huge change")
+    is_milestone: bool = Field(description="Shape comes together, sub-assemblies join, etc.")
     milestone_kind: (
-        Literal["shape_forms", "color_block", "mechanism", "subassembly_join", "final"]
-        | None
+        Literal["shape_forms", "color_block", "mechanism", "subassembly_join", "final"] | None
     ) = None
     note: str = Field(default="", description="One-line description of what happens")
-    diff_mask: str | None = Field(
-        default=None, description="Path to mask of newly added region"
-    )
-    diff_area: float | None = Field(
-        default=None, ge=0, le=1, description="Fraction of pixels"
-    )
+    diff_mask: str | None = Field(default=None, description="Path to mask of newly added region")
+    diff_area: float | None = Field(default=None, ge=0, le=1, description="Fraction of pixels")
     aligned_image: str | None = Field(
         default=None,
         description=(
@@ -132,18 +119,10 @@ class StepAsset(BaseModel):
     step_number: int
     full_image: str = Field(description="This step's full panel image (fallback)")
     model: Picture | None = Field(default=None, description="Model after this step")
-    prev_model: Picture | None = Field(
-        default=None, description="Model before this step"
-    )
-    parts: list[Picture] = Field(
-        default_factory=list, description="New parts cut from the callout"
-    )
-    landing_x: float = Field(
-        default=0.5, ge=0, le=1, description="Fraction of model width"
-    )
-    landing_y: float = Field(
-        default=0.3, ge=0, le=1, description="Fraction of model height"
-    )
+    prev_model: Picture | None = Field(default=None, description="Model before this step")
+    parts: list[Picture] = Field(default_factory=list, description="New parts cut from the callout")
+    landing_x: float = Field(default=0.5, ge=0, le=1, description="Fraction of model width")
+    landing_y: float = Field(default=0.3, ge=0, le=1, description="Fraction of model height")
 
 
 class Assets(BaseModel):

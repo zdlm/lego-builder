@@ -42,9 +42,7 @@ def music_offset(beats: Beats, length_s: int) -> float:
     return round(max(0.0, min(first - HOOK_S, beats.duration_s - length_s)), 3)
 
 
-def fit_to_beats(
-    snaps: list[SelectedStep], slots: list[float]
-) -> list[tuple[float, SelectedStep]]:
+def fit_to_beats(snaps: list[SelectedStep], slots: list[float]) -> list[tuple[float, SelectedStep]]:
     """Give each snap a beat, in order, using up the snap window.
 
     Climax steps get one beat each. Spare beats go to build steps, earliest first, so the pace
@@ -82,6 +80,7 @@ def build_timeline(
     sfx: list[str],
     total_steps: int,
     final_image: str | None = None,
+    cta_text: str = "Ready to build it?",
 ) -> Timeline:
     by_step = {a.step_number: a for a in assets.assets}
     snap_window_end = length_s - END_S
@@ -144,7 +143,7 @@ def build_timeline(
             kind="cta",
             start_s=length_s - CTA_S,
             duration_s=CTA_S,
-            text="Ready to build it?",
+            text=cta_text,
         )
     )
 
@@ -155,7 +154,8 @@ def build_timeline(
         length_s=length_s,  # type: ignore[arg-type]
         music=beats.music,
         music_start_s=offset,
-        total_steps=total_steps,
+        # Count up to the step that finishes the model, not extras such as a display stand.
+        total_steps=reveal.step_number if reveal else total_steps,
         final_image=final_image,
         final_model=assets.final_model,
         events=events,
@@ -178,5 +178,6 @@ def run(ctx: StageContext) -> None:
         sfx=[str(p) for p in ctx.sfx],
         total_steps=len(raw.steps),
         final_image=raw.final_image,
+        cta_text=ctx.cta_text,
     )
     write_model(paths.timeline, timeline)

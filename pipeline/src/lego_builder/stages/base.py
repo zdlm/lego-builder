@@ -20,3 +20,4 @@ class StageContext:
     length_s: Literal[15, 30, 60] = 30
     sfx: list[Path] = field(default_factory=list)
     use_llm_ranking: bool = True
+    cta_text: str = "Ready to build it?"

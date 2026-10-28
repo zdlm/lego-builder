@@ -12,7 +12,9 @@ def _step_image() -> np.ndarray:
     img[:] = PAGE
     img[200:350, 250:400] = (0, 0, 0)  # model outline
     img[205:345, 255:395] = (0, 220, 255)  # model fill
-    img[260:290, 300:340] = PAGE  # page-coloured gap enclosed by the model
+    img[270:278, 310:318] = PAGE  # small page-coloured gap enclosed by the model
+    img[240:300, 100:150] = (60, 60, 60)  # sub-assembly box...
+    img[268:271, 150:250] = (0, 0, 0)  # ...joined to the model by a thin arrow
     img[20:140, 20:300] = (60, 60, 60)  # callout border
     img[23:137, 23:297] = CALLOUT
     img[40:90, 50:110] = (180, 100, 255)  # part 1
@@ -21,14 +23,14 @@ def _step_image() -> np.ndarray:
     return img
 
 
-def test_cut_model_makes_background_transparent_but_keeps_enclosed_gaps() -> None:
+def test_cut_model_drops_background_and_attached_arrows_but_keeps_small_gaps() -> None:
     found = cut_model(_step_image(), BBox(x=240, y=190, w=120, h=120))
     assert found is not None
     rgba, x, y = found
-    assert (x, y) == (250, 200)
-    assert rgba.shape[:2] == (150, 150)
-    assert rgba[0, 0, 3] == 255 and rgba[75, 75, 3] == 255
-    assert rgba[70, 60, 3] == 255  # enclosed gap stays opaque
+    assert 244 <= x <= 250 and y == 200
+    assert rgba.shape[0] == 150 and rgba.shape[1] <= 156
+    assert rgba[75, -75, 3] == 255
+    assert rgba[74, 310 - x + 4, 3] == 255  # enclosed gap stays opaque
 
 
 def test_cut_parts_returns_each_part_left_to_right_without_labels() -> None:

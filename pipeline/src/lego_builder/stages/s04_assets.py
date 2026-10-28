@@ -46,9 +46,7 @@ def _read(path: Path) -> Any:
     return img
 
 
-def landing_fraction(
-    u: StepUnderstanding, x: int, y: int, w: int, h: int
-) -> tuple[float, float]:
+def landing_fraction(u: StepUnderstanding, x: int, y: int, w: int, h: int) -> tuple[float, float]:
     """Landing point as a fraction of the cut-out model's size (top centre if unknown)."""
     if u.landing is None:
         return 0.5, 0.3
@@ -61,9 +59,7 @@ def run(ctx: StageContext) -> None:
     paths = ctx.paths.ensure()
     raw_all = read_model(paths.steps_raw, StepsRaw)
     raw = {s.step_number: s for s in raw_all.steps}
-    und = {
-        u.step_number: u for u in read_model(paths.understanding, Understanding).steps
-    }
+    und = {u.step_number: u for u in read_model(paths.understanding, Understanding).steps}
     sel = read_model(paths.selection, Selection)
     order = sorted(raw)
 
@@ -73,9 +69,7 @@ def run(ctx: StageContext) -> None:
         """Model cut-out of step n plus its top-left corner in the step image (cached)."""
         if n not in models:
             u = und.get(n)
-            found = cut_model(
-                _read(paths.root / raw[n].image), u.model_bbox if u else None
-            )
+            found = cut_model(_read(paths.root / raw[n].image), u.model_bbox if u else None)
             models[n] = None
             if found is not None:
                 rgba, x, y = found
@@ -86,6 +80,9 @@ def run(ctx: StageContext) -> None:
     assets: list[StepAsset] = []
     for s in sel.selected:
         n = s.step_number
+        if n not in raw:
+            print(f"s04: step {n} was selected but is not in {paths.steps_raw.name}; skipped")
+            continue
         idx = order.index(n)
         model = model_of(n)
         prev = model_of(order[idx - 1]) if idx > 0 else None
@@ -95,9 +92,7 @@ def run(ctx: StageContext) -> None:
         if u is not None and u.callout_bbox is not None:
             img = _read(paths.root / raw[n].image)
             for k, rgba in enumerate(cut_parts(img, u.callout_bbox)):
-                parts.append(
-                    _save(rgba, paths.assets_dir / f"part_{n:03d}_{k}.png", paths.root)
-                )
+                parts.append(_save(rgba, paths.assets_dir / f"part_{n:03d}_{k}.png", paths.root))
 
         lx, ly = 0.5, 0.3
         if model is not None and u is not None:
@@ -120,8 +115,13 @@ def run(ctx: StageContext) -> None:
     if raw_all.final_image:
         found = cut_model(_read(paths.root / raw_all.final_image), None)
         if found is not None:
-            final_model = _save(
-                found[0], paths.assets_dir / "final_model.png", paths.root
-            )
+            final_model = _save(found[0], paths.assets_dir / "final_model.png", paths.root)
 
+    no_model = [a.step_number for a in assets if a.model is None]
+    no_parts = [a.step_number for a in assets if not a.parts]
+    print(
+        f"s04: {len(assets)} steps, {sum(len(a.parts) for a in assets)} parts; "
+        f"no model cut-out: {no_model or 'none'}; no parts: {no_parts or 'none'}; "
+        f"finished model: {'yes' if final_model else 'no'}"
+    )
     write_model(paths.assets, Assets(assets=assets, final_model=final_model))

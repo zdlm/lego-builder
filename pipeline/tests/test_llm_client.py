@@ -27,6 +27,7 @@ def _fake_cli(tmp_path: Path, result: str, monkeypatch: pytest.MonkeyPatch) -> P
     )
     script.chmod(script.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("LEGO_BUILDER_CLAUDE_BIN", str(script))
+    monkeypatch.setenv("LEGO_BUILDER_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "should-not-leak")
     return log
 
@@ -49,3 +50,21 @@ def test_ask_json_raises_on_bad_json(tmp_path: Path, monkeypatch: pytest.MonkeyP
     _fake_cli(tmp_path, "not json at all", monkeypatch)
     with pytest.raises(client.ClaudeCLIError):
         client.ask_json("?", [], _Reply)
+    assert not list((tmp_path / "data").rglob("*.txt"))  # invalid replies are not cached
+
+
+def test_valid_replies_are_cached_per_prompt_and_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    log = _fake_cli(tmp_path, '{"ok": true}', monkeypatch)
+    img = tmp_path / "step.png"
+    img.write_bytes(b"x")
+    client.ask_json("Is it ok?", [img], _Reply)
+
+    log.unlink()
+    assert client.ask_json("Is it ok?", [img], _Reply).ok is True
+    assert not log.exists()  # served from the cache
+
+    img.write_bytes(b"changed")
+    client.ask_json("Is it ok?", [img], _Reply)
+    assert log.exists()  # new image bytes, new call
