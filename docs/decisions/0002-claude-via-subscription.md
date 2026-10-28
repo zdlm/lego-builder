@@ -1,6 +1,6 @@
 # 0002 — Call Claude through the Claude Code CLI on our subscription, not the API
 
-Date: 2026-09-23 · Status: accepted
+Date: 2026-09-23 · Status: superseded by 0004 (2026-10-28)
 
 ## Context
 

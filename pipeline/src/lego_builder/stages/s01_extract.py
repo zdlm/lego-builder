@@ -64,7 +64,7 @@ def run(ctx: StageContext) -> None:
     import cv2
 
     steps: list[RawStep] = []
-    final_image: str | None = None
+    finals: list[tuple[int, Path, BBox]] = []
     for page_no, page_img in enumerate(pages, start=1):
         img = cv2.imread(str(page_img))
         if img is None:
@@ -75,7 +75,12 @@ def run(ctx: StageContext) -> None:
             [page_img],
             _PageSteps,
         )
+        seen = max((s.step_number for s in steps), default=0)
         for item in found.steps:
+            # Numbers that go back are sub-steps inside a step panel (e.g. 1-5 of a sub-build).
+            if item.step_number <= seen:
+                print(f"s01: page {page_no}: skipped step {item.step_number} (after step {seen})")
+                continue
             bbox = expand_to_content(img, item.bbox)
             out = paths.steps_dir / f"step_{item.step_number:03d}.png"
             crop(page_img, bbox, out)
@@ -87,11 +92,20 @@ def run(ctx: StageContext) -> None:
                     image=str(out.relative_to(paths.root)),
                 )
             )
-        # Keep the last finished-model picture: it comes after the final step.
         if found.final_model and not found.steps:
-            out = paths.steps_dir / "final.png"
-            crop(page_img, expand_to_content(img, found.final_model.bbox), out)
-            final_image = str(out.relative_to(paths.root))
+            finals.append((page_no, page_img, found.final_model.bbox))
+
+    # The finished model follows the last step; later "models" are usually ads for other sets.
+    last_step_page = max((s.page for s in steps), default=0)
+    after = [f for f in finals if f[0] > last_step_page]
+    chosen = after[0] if after else (finals[-1] if finals else None)
+    final_image: str | None = None
+    if chosen is not None:
+        page_no, page_img, bbox = chosen
+        out = paths.steps_dir / "final.png"
+        crop(page_img, expand_to_content(cv2.imread(str(page_img)), bbox), out)
+        final_image = str(out.relative_to(paths.root))
+        print(f"s01: finished model from page {page_no}")
 
     steps.sort(key=lambda s: s.step_number)
     write_model(

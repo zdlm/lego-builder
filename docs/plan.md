@@ -73,7 +73,7 @@ Select N steps based on video length and the number of beats in the music. Claud
 | Stage | Choice |
 |---|---|
 | PDF processing | Python + PyMuPDF |
-| Visual understanding / step selection | Claude via the Claude Code CLI, on our Claude subscription (no API) |
+| Visual understanding / step selection | LLM with vision via GitHub Copilot CLI, on our own Copilot plan (no API); see ADR 0004 |
 | Image diffing | OpenCV |
 | Beat detection | librosa |
 | 3D rendering (bonus) | Blender + LDraw import add-on |

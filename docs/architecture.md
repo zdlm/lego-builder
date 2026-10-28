@@ -37,13 +37,13 @@ Image paths inside JSON are relative to the run directory. Music and SFX paths a
 
 ## Stages
 
-Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which runs the Claude Code CLI (`claude -p --output-format json --allowedTools Read`) on the owner's Claude subscription. Images are passed as file paths that Claude opens with its Read tool. See ADR 0002.
+The LLM is called only through `pipeline/src/lego_builder/llm/client.py::ask_json`, which runs GitHub Copilot CLI (`copilot -p … --silent --attachment <image>`) on the user's own Copilot plan; step images are sent as attachments, so the model must support vision. Replies are validated against Pydantic models and cached in `data/cache/llm/`. `LEGO_BUILDER_LLM=claude` switches to Claude Code CLI instead. See ADR 0004 (supersedes 0002).
 
-| Stage | Job | Uses Claude? | Status |
+| Stage | Job | Uses the LLM? | Status |
 |---|---|---|---|
 | s01_extract | Rasterise PDF, find and crop each numbered step and the finished-model picture | Yes (segmentation) | Implemented; boxes refined with OpenCV |
 | s02_understand | New parts, visual change, milestone; model / callout boxes and landing point; OpenCV diff (scoring only) | Yes | Implemented |
-| s03_select | Satisfaction score + pick N steps with pacing; optional Claude re-rank; stops at the "final" step | Optional | Heuristic implemented + tested |
+| s03_select | Satisfaction score + pick N steps with pacing; optional LLM re-rank; stops at the "final" step | Optional | Heuristic implemented + tested |
 | s04_assets | Transparent model per step + part cut-outs from the callout (ADR 0003) | No | Implemented + tested |
 | s05_beats | Beat detection with librosa | No | Implemented; downbeats approximate |
 | s06_timeline | Put steps on beats (impact on the beat, fly-in lead); hook / snaps / reveal / CTA; music offset | No | Implemented + tested |

@@ -45,7 +45,7 @@ lego-builder/
 │   │   ├── config.py      ← settings loaded from env
 │   │   ├── models.py      ← Pydantic data contracts (source of truth)
 │   │   ├── paths.py       ← run-directory layout helpers
-│   │   ├── llm/           ← Claude Code CLI wrapper + prompt files
+│   │   ├── llm/           ← LLM CLI wrapper (Copilot CLI) + prompt files
 │   │   └── stages/        ← one module per pipeline stage
 │   └── tests/
 ├── video/                 ← TypeScript/Remotion: timeline.json → MP4
@@ -83,7 +83,7 @@ The Python side decides *what* happens and *when*. The Remotion side decides onl
 3. **Stay in your lane.** Keep changes inside the module or stage you are working on. If you need to change a data contract, see rule 4.
 4. **Data contracts are shared.** `models.py` is the source of truth. If you change a model: update `docs/data-contracts.md`, update the mirrored TypeScript types in `video/src/lib/timeline.ts`, bump `SCHEMA_VERSION` in `models.py`, and note it in your commit message.
 5. **Stages are pure and re-runnable.** A stage reads its inputs from the run directory, writes its outputs there, and can be re-run without side effects. No hidden global state.
-6. **Claude runs on the owner's subscription, never the API.** All model calls go through `llm/client.py`, which shells out to the Claude Code CLI (`claude -p`). Do not add the `anthropic` SDK, API keys or any other paid model API.
+6. **The LLM runs on the user's own Copilot plan, never a paid API.** All model calls go through `llm/client.py::ask_json`, which shells out to GitHub Copilot CLI (`copilot -p`; Claude Code via `LEGO_BUILDER_LLM=claude` is the only alternative). Do not add model SDKs (`anthropic`, `openai`, …), API keys or any other paid model API. See ADR 0004.
 7. **Prompts live in files.** LLM prompts go in `pipeline/src/lego_builder/llm/prompts/*.md`, never inline in Python. Always ask the model for JSON and validate it with the Pydantic models.
 8. **Record decisions.** Any significant technical choice (new library, changed approach) gets a short ADR in `docs/decisions/NNNN-title.md`.
 9. **Test what you add.** Add or update tests in `pipeline/tests/`. Run `make test` and `make lint` before finishing.

@@ -6,12 +6,12 @@ Practical recipes. Rules are in [AGENTS.md](AGENTS.md); design is in [architectu
 
 - Python ≥ 3.10 is required. macOS ships 3.9, so install a newer one (e.g. `brew install python@3.12` or `mise`). `scripts/setup.sh` picks the newest `python3.x` it finds.
 - `make setup` creates `pipeline/.venv` and runs `npm install` in `video/`.
-- Without the `claude` CLI you can still run everything except the Claude-backed steps (s01 segmentation, s02 understanding, optional s03 re-ranking). Use `--no-llm-rank` for s03.
+- Without the `copilot` CLI you can still run everything except the LLM-backed steps (s01 segmentation, s02 understanding, optional s03 re-ranking). Use `--no-llm-rank` for s03.
 
-## Running without spending Claude usage
+## Running without spending Copilot requests
 
-- Unit tests never call Claude (`make test`).
-- Claude replies are cached in `data/cache/claude/` by prompt + image bytes + model, so re-running a stage on unchanged inputs is free. Changing a prompt or an image only re-asks the affected calls. Set `LEGO_BUILDER_CLAUDE_CACHE=false` to force fresh answers.
+- Unit tests never call the LLM (`make test`).
+- LLM replies are cached in `data/cache/llm/` by backend + model + prompt + image bytes, so re-running a stage on unchanged inputs is free. Changing a prompt or an image only re-asks the affected calls. Set `LEGO_BUILDER_LLM_CACHE=false` to force fresh answers.
 - Re-run only the stage you are working on against an existing run: `make stage STAGE=s03_select RUN=<run_id>`. Earlier stages' outputs stay on disk.
 - For heuristics (s03, s05, s06), edit/copy a run's JSON by hand and re-run just that stage.
 - For the video side you only need a run's `06_timeline.json` plus the images it points to. Ask for a zipped run folder, unzip it into `data/runs/`, then `make preview RUN=<run_id>`.
@@ -41,7 +41,7 @@ Follow "Changing a contract" in [data-contracts.md](data-contracts.md). Checklis
 - Prompts are Markdown files in `pipeline/src/lego_builder/llm/prompts/`. Never inline them in Python.
 - Load with `load_prompt(name, **vars)`. It uses `str.format`, so literal braces in JSON examples must be doubled (`{{` and `}}`), and placeholders are single braces (`{width}`).
 - Call through `ask_json(prompt, images, SchemaModel)` in `llm/client.py`. It validates the reply with Pydantic and retries once with the error. Always ask for "JSON only".
-- Images are file paths that Claude opens itself. Keep images reasonably small; each call is one CLI process on a subscription with usage limits.
+- Images are sent as attachments (Copilot CLI) or opened by path (Claude Code). Keep images reasonably small and use a model that supports vision; each call is one CLI process and one request of your plan.
 - Test prompt changes on 3–5 real steps before running a whole manual, and note the result in your PR.
 - Never add the `anthropic` SDK or an API key (ADR 0002).
 
@@ -57,10 +57,11 @@ Follow "Changing a contract" in [data-contracts.md](data-contracts.md). Checklis
 
 | Symptom | Check |
 |---|---|
-| `claude not found` / auth errors | Install Claude Code and run `claude` once to sign in. Make sure `LEGO_BUILDER_CLAUDE_BIN` is right. |
-| Claude call times out | Raise `LEGO_BUILDER_CLAUDE_TIMEOUT_S`; check your subscription usage limit; re-run the stage (it is re-runnable). |
+| `copilot not found` / auth errors | Install Copilot CLI and run `copilot` once, then `/login` (or export `COPILOT_GITHUB_TOKEN`). Check `LEGO_BUILDER_COPILOT_BIN`, and that your organisation allows Copilot CLI. |
+| Model refuses images | Set `LEGO_BUILDER_MODEL` to a vision-capable model; your organisation's policy must allow image input. |
+| LLM call times out | Raise `LEGO_BUILDER_LLM_TIMEOUT_S`; check your plan's request allowance; re-run the stage (it is re-runnable and cached). |
 | Step boxes cut the wrong area | `01_pages/*.png` vs `01_steps_raw.json`; tune `segment_page.md` (task 3). |
-| Model / parts cut-outs wrong | `04_assets/model_NNN.png` and `part_NNN_K.png`; check `model_bbox` / `callout_bbox` / `landing` for that step in `02_understanding.json` (they come from Claude, refined in `imaging.py`). |
+| Model / parts cut-outs wrong | `04_assets/model_NNN.png` and `part_NNN_K.png`; check `model_bbox` / `callout_bbox` / `landing` for that step in `02_understanding.json` (they come from the LLM, refined in `imaging.py`). |
 | Snaps not on beat | `05_beats.json` `beats_s`; tests in `test_timeline.py`. |
 | Remotion cannot find a run | `video/public/runs` symlink, and `06_timeline.json` exists under `data/runs/<run_id>/`. |
 | Media 404 in Studio | Paths must be under `assets/` or inside the run directory. |

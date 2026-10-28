@@ -48,9 +48,18 @@ def score_step(u: StepUnderstanding) -> float:
 
 
 def main_build(steps: list[StepUnderstanding]) -> list[StepUnderstanding]:
-    """Steps up to the one that finishes the main model; later extras (e.g. a stand) are dropped."""
+    """Steps up to the one that finishes the main model; later extras (e.g. a stand) are dropped.
+
+    A "final" step that is immediately followed by a sub-assembly join only finished a
+    sub-assembly (the model is often drawn with a starburst then), so it doesn't count.
+    """
     ordered = sorted(steps, key=lambda u: u.step_number)
-    finals = [i for i, u in enumerate(ordered) if u.milestone_kind == "final"]
+    finals = [
+        i
+        for i, u in enumerate(ordered)
+        if u.milestone_kind == "final"
+        and not (i + 1 < len(ordered) and ordered[i + 1].milestone_kind == "subassembly_join")
+    ]
     return ordered[: finals[-1] + 1] if finals else ordered
 
 

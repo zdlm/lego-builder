@@ -33,3 +33,11 @@ def test_display_stand_after_final_step_is_not_picked() -> None:
     out = pick(steps, 10)
     assert out[-1].role == "reveal" and out[-1].step_number == 26
     assert all(s.step_number != 27 for s in out)
+
+
+def test_finished_subassembly_is_not_the_final_step() -> None:
+    steps = [_step(i, 0.5) for i in range(1, 11)]
+    steps[4] = _step(5, 0.8, "final")  # sub-assembly done...
+    steps[5] = _step(6, 0.5, "subassembly_join")  # ...and attached in the next step
+    out = pick(steps, 5)
+    assert out[-1].role == "reveal" and out[-1].step_number == 10

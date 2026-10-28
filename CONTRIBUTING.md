@@ -4,7 +4,7 @@ For humans and AI agents alike. Technical rules are in [AGENTS.md](AGENTS.md); t
 
 ## Onboarding in 10 minutes
 
-1. Install prerequisites: Python ≥ 3.10, Node ≥ 18, ffmpeg, and the Claude Code CLI (signed in; see README).
+1. Install prerequisites: Python ≥ 3.10, Node ≥ 18, ffmpeg, and GitHub Copilot CLI (signed in; see README).
 2. `make setup`, then `make test`.
 3. Read, in order: [AGENTS.md](AGENTS.md) → [docs/architecture.md](docs/architecture.md) → [docs/data-contracts.md](docs/data-contracts.md) → [docs/glossary.md](docs/glossary.md).
 4. Pick a task from [docs/tasks.md](docs/tasks.md). Recipes for common changes are in [docs/dev-guide.md](docs/dev-guide.md).
@@ -16,7 +16,7 @@ For humans and AI agents alike. Technical rules are in [AGENTS.md](AGENTS.md); t
 - **Several agents on one machine?** Give each its own checkout: `git worktree add ../lego-builder-<task> -b <branch>`. Never let two agents edit the same working tree.
 - **Stay in your area.** `pipeline/` and `video/` meet only at `06_timeline.json`. If you need a contract change, make it in its own small PR first and tell the others (see "Changing a contract" in `docs/data-contracts.md`).
 - **Don't edit someone else's in-progress files** without asking the owner.
-- **Run directories are local.** `data/` is gitignored. Everyone has their own runs and their own Claude login (usage is per person, see ADR 0002).
+- **Run directories are local.** `data/` is gitignored. Everyone has their own runs and their own Copilot login (usage is per person, see ADR 0004).
 
 ## Sharing inputs and outputs
 
