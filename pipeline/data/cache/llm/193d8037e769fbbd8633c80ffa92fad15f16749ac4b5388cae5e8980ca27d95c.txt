@@ -1,0 +1,4 @@
+The image shown is about 2000×1422, but the stated size is 2126×1512, so I scaled coordinates by about 1.063.
+
+{"steps": [{"step_number": 246, "bbox": {"x": 30, "y": 36, "w": 940, "h": 1370}}, {"step_number": 247, "bbox": {"x": 1070, "y": 36, "w": 988, "h": 1370}}], "final_model": null}
+

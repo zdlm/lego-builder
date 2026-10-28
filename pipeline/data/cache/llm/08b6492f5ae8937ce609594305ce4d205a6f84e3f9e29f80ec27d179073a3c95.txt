@@ -1,0 +1,2 @@
+{"steps": [{"step_number": 28, "bbox": {"x": 36, "y": 36, "w": 940, "h": 1112}}, {"step_number": 29, "bbox": {"x": 1072, "y": 36, "w": 940, "h": 1112}}], "final_model": null}
+

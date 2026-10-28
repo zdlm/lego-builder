@@ -1,0 +1,8 @@
+The image shown is about 2000 px wide, but the prompt says 2126×1512, so I scaled the coordinates by 1.063.
+
+Step 1 covers roughly x 35–960 and y 37–860 in the displayed image. Scaled, that is x 37, y 39, w 983, h 876.
+
+Step 2 covers roughly x 1010–1890 and y 37–1185 in the displayed image. Scaled, that is x 1074, y 39, w 936, h 1221.
+
+{"steps": [{"step_number": 1, "bbox": {"x": 37, "y": 39, "w": 983, "h": 876}}, {"step_number": 2, "bbox": {"x": 1074, "y": 39, "w": 936, "h": 1221}}], "final_model": null}
+
