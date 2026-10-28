@@ -14,7 +14,12 @@ from typing import Literal
 
 from lego_builder.jsonio import read_model, write_model
 from lego_builder.llm.client import ask_json, load_prompt
-from lego_builder.models import SelectedStep, Selection, StepUnderstanding, Understanding
+from lego_builder.models import (
+    SelectedStep,
+    Selection,
+    StepUnderstanding,
+    Understanding,
+)
 from lego_builder.stages.base import StageContext
 
 Role = Literal["hook", "build", "climax", "reveal"]
@@ -41,6 +46,13 @@ def score_step(u: StepUnderstanding) -> float:
     return max(0.0, min(s, 1.0))
 
 
+def main_build(steps: list[StepUnderstanding]) -> list[StepUnderstanding]:
+    """Steps up to the one that finishes the main model; later extras (e.g. a stand) are dropped."""
+    ordered = sorted(steps, key=lambda u: u.step_number)
+    finals = [i for i, u in enumerate(ordered) if u.milestone_kind == "final"]
+    return ordered[: finals[-1] + 1] if finals else ordered
+
+
 def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
     """Pick `count` steps: always the final step, the best-scoring others, kept in build order.
 
@@ -49,8 +61,8 @@ def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
     """
     if not steps:
         return []
-    count = min(count, len(steps))
-    ordered = sorted(steps, key=lambda u: u.step_number)
+    ordered = main_build(steps)
+    count = min(count, len(ordered))
     final = ordered[-1]
     rest = ordered[:-1]
     chosen: list[StepUnderstanding] = []
@@ -73,9 +85,13 @@ def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
         )
     ]
     for i, u in enumerate(chosen):
-        role: Role = "reveal" if u is final else ("climax" if i >= climax_from else "build")
+        role: Role = (
+            "reveal" if u is final else ("climax" if i >= climax_from else "build")
+        )
         out.append(
-            SelectedStep(step_number=u.step_number, score=score_step(u), reason=u.note, role=role)
+            SelectedStep(
+                step_number=u.step_number, score=score_step(u), reason=u.note, role=role
+            )
         )
     return out
 
@@ -83,11 +99,12 @@ def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
 def run(ctx: StageContext) -> None:
     paths = ctx.paths.ensure()
     und = read_model(paths.understanding, Understanding)
+    steps = main_build(und.steps)
     count = TARGET_COUNTS[ctx.length_s]
-    selected = pick(und.steps, count)
+    selected = pick(steps, count)
 
     if ctx.use_llm_ranking:
-        shortlist = sorted(und.steps, key=score_step, reverse=True)[: count * 2]
+        shortlist = sorted(steps, key=score_step, reverse=True)[: count * 2]
         candidates = json.dumps(
             [
                 {
@@ -100,7 +117,10 @@ def run(ctx: StageContext) -> None:
         )
         selection = ask_json(
             load_prompt(
-                "rank_steps", length=str(ctx.length_s), count=str(count), candidates=candidates
+                "rank_steps",
+                length=str(ctx.length_s),
+                count=str(count),
+                candidates=candidates,
             ),
             [],
             Selection,

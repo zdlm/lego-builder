@@ -1,11 +1,37 @@
-import { AbsoluteFill, Audio, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { assetFile, runFile } from "../lib/timeline";
+import { AbsoluteFill, Audio, Easing, Img, interpolate, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
+import { MODEL_SHADOW, modelScale, standOnStage } from "../lib/stage";
+import { assetFile, runFile, type Picture, type Timeline } from "../lib/timeline";
 import type { EventProps } from "./types";
 
+const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+
+const Model: React.FC<{ timeline: Timeline; pic: Picture; scale: number; squash?: number }> = ({
+  timeline,
+  pic,
+  scale,
+  squash = 1,
+}) => {
+  const { left, top } = standOnStage(pic, scale);
+  return (
+    <Img
+      src={runFile(timeline, pic.image)}
+      style={{
+        position: "absolute",
+        left,
+        top,
+        width: pic.width * scale,
+        height: pic.height * scale,
+        transformOrigin: "50% 100%",
+        transform: `scale(${2 - squash}, ${squash})`,
+        filter: MODEL_SHADOW,
+      }}
+    />
+  );
+};
+
 /**
- * One beat: the new parts drop from above onto the previous step, bounce, and lock in with a flash,
- * a small screen shake and a click sound. Falls back to a pop-in of the full step image when there
- * is no cutout.
+ * One step: the new parts fall onto the previous model and, exactly on the beat (`impact_s`),
+ * the picture cuts to the new model with a squash, a ring burst, a small shake and a click.
  */
 export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
   const frame = useCurrentFrame();
@@ -13,35 +39,87 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
   const a = event.asset;
   if (!a) return null;
 
-  const displayWidth = 960;
-  const scale = displayWidth / a.base_width;
+  const impact = Math.max(0, Math.round(((event.impact_s ?? event.start_s) - event.start_s) * fps));
+  const landed = frame >= impact;
+  const k = frame - impact;
+  const sfx = event.sfx ? (
+    <Sequence from={impact}>
+      <Audio src={assetFile(event.sfx)} />
+    </Sequence>
+  ) : null;
 
-  const drop = spring({ frame, fps, config: { damping: 11, stiffness: 180, mass: 0.6 } });
-  const landed = frame >= 4;
-  const shake = landed ? interpolate(frame, [4, 6, 8, 10], [0, 8, -5, 0], { extrapolateRight: "clamp" }) : 0;
-  const flash = interpolate(frame, [4, 6, 12], [0, 0.6, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  if (!a.model) {
+    const pop = landed ? interpolate(k, [0, 3, 8], [0.9, 1.03, 1], clamp) : 0;
+    return (
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+        {landed ? <Img src={runFile(timeline, a.full_image)} style={{ width: 960, transform: `scale(${pop})` }} /> : null}
+        {sfx}
+      </AbsoluteFill>
+    );
+  }
+
+  const scale = modelScale(timeline);
+  const { left, top } = standOnStage(a.model, scale);
+  const target = {
+    x: left + a.landing_x * a.model.width * scale,
+    y: top + a.landing_y * a.model.height * scale,
+  };
+
+  const squash = landed ? interpolate(k, [0, 2, 5, 9], [0.93, 1.03, 0.99, 1], clamp) : 1;
+  const shake = landed ? interpolate(k, [0, 2, 4, 6], [0, 7, -4, 0], clamp) : 0;
+  const ring = interpolate(k, [0, 10], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const flash = interpolate(k, [0, 1, 6], [0, 0.25, 0], clamp);
+  const fall = interpolate(frame, [0, Math.max(impact, 1)], [0, 1], { ...clamp, easing: Easing.in(Easing.quad) });
 
   return (
-    <AbsoluteFill style={{ transform: `translateY(${shake}px)`, justifyContent: "center", alignItems: "center" }}>
-      {a.cutout && a.cutout_bbox ? (
-        <div style={{ position: "relative", width: displayWidth, height: a.base_height * scale }}>
-          <Img src={runFile(timeline, a.base_image)} style={{ width: displayWidth }} />
-          <Img
-            src={runFile(timeline, a.cutout)}
-            style={{
-              position: "absolute",
-              left: a.cutout_bbox.x * scale,
-              top: a.cutout_bbox.y * scale + (1 - drop) * -600,
-              width: a.cutout_bbox.w * scale,
-              height: a.cutout_bbox.h * scale,
-            }}
-          />
-        </div>
-      ) : (
-        <Img src={runFile(timeline, a.full_image)} style={{ width: displayWidth, transform: `scale(${0.9 + 0.1 * drop})` }} />
-      )}
+    <AbsoluteFill style={{ transform: `translateY(${shake}px)` }}>
+      {landed ? (
+        <Model timeline={timeline} pic={a.model} scale={scale} squash={squash} />
+      ) : a.prev_model ? (
+        <Model timeline={timeline} pic={a.prev_model} scale={scale} />
+      ) : null}
+
+      {!landed
+        ? a.parts.map((p, i) => {
+          const spread = (i - (a.parts.length - 1) / 2) * 140;
+          const startX = target.x + spread * 1.6;
+          const startY = -p.height * scale - 80 - i * 40;
+          const x = startX + (target.x + spread * 0.3 - startX) * fall;
+          const y = startY + (target.y - startY) * fall;
+          const spin = (1 - fall) * (i % 2 === 0 ? -25 : 25);
+          return (
+            <Img
+              key={p.image}
+              src={runFile(timeline, p.image)}
+              style={{
+                position: "absolute",
+                left: x - (p.width * scale) / 2,
+                top: y - (p.height * scale) / 2,
+                width: p.width * scale,
+                height: p.height * scale,
+                transform: `rotate(${spin}deg)`,
+                filter: MODEL_SHADOW,
+              }}
+            />
+          );
+        })
+        : null}
+
+      {landed && ring < 1 ? (
+        <div
+          style={{
+            position: "absolute",
+            left: target.x - 160 * ring,
+            top: target.y - 160 * ring,
+            width: 320 * ring,
+            height: 320 * ring,
+            borderRadius: "50%",
+            border: `${Math.max(1, 14 * (1 - ring))}px solid rgba(255, 255, 255, ${1 - ring})`,
+          }}
+        />
+      ) : null}
       <AbsoluteFill style={{ backgroundColor: "white", opacity: flash }} />
-      {event.sfx ? <Audio src={assetFile(event.sfx)} /> : null}
+      {sfx}
     </AbsoluteFill>
   );
 };

@@ -28,7 +28,7 @@ Every run lives in `data/runs/<run_id>/`. Stages write numbered files so the ord
 | `02_masks/mask_NNN.png` | s02_understand | – |
 | `02_understanding.json` | s02_understand | `Understanding` |
 | `03_selection.json` | s03_select | `Selection` |
-| `04_assets/cutout_NNN.png` | s04_assets | – |
+| `04_assets/model_NNN.png`, `part_NNN_K.png`, `final_model.png` | s04_assets | – |
 | `04_assets.json` | s04_assets | `Assets` |
 | `05_beats.json` | s05_beats | `Beats` |
 | `06_timeline.json` | s06_timeline | `Timeline` |
@@ -41,12 +41,12 @@ Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which r
 
 | Stage | Job | Uses Claude? | Status |
 |---|---|---|---|
-| s01_extract | Rasterise PDF, find and crop each numbered step | Yes (segmentation) | Scaffolded |
-| s02_understand | New parts, visual change, milestone; OpenCV diff mask | Yes | Implemented (ORB + homography alignment) |
-| s03_select | Satisfaction score + pick N steps with pacing; optional Claude re-rank | Optional | Heuristic implemented + tested |
-| s04_assets | RGBA cutouts of new parts for the 2D drop animation | No | Scaffolded |
+| s01_extract | Rasterise PDF, find and crop each numbered step and the finished-model picture | Yes (segmentation) | Implemented; boxes refined with OpenCV |
+| s02_understand | New parts, visual change, milestone; model / callout boxes and landing point; OpenCV diff (scoring only) | Yes | Implemented |
+| s03_select | Satisfaction score + pick N steps with pacing; optional Claude re-rank; stops at the "final" step | Optional | Heuristic implemented + tested |
+| s04_assets | Transparent model per step + part cut-outs from the callout (ADR 0003) | No | Implemented + tested |
 | s05_beats | Beat detection with librosa | No | Implemented; downbeats approximate |
-| s06_timeline | Put steps on beats; hook / snaps / reveal / CTA | No | Implemented + tested |
+| s06_timeline | Put steps on beats (impact on the beat, fly-in lead); hook / snaps / reveal / CTA; music offset | No | Implemented + tested |
 
 ## Video composition (Remotion)
 
@@ -54,9 +54,9 @@ Claude is called only through `pipeline/src/lego_builder/llm/client.py`, which r
 
 | Event | Component | Effect |
 |---|---|---|
-| hook | `Hook` | Punch-in zoom on the most striking step |
-| snap | `SnapStep` | Parts drop, bounce, flash, screen shake, click SFX |
-| reveal | `Reveal` | Finished model, set name and number |
+| hook | `Hook` | Punch-in on the finished model |
+| snap | `SnapStep` | New parts fall onto the previous model; on the beat, cut to the new model with squash, ring burst, shake, click SFX |
+| reveal | `Reveal` | Finished model with a glow, set name and number |
 | cta | `Cta` | Call to action card |
 | (always) | `Overlays` | Step counter and progress bar |
 

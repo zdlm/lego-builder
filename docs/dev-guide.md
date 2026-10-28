@@ -59,7 +59,7 @@ Follow "Changing a contract" in [data-contracts.md](data-contracts.md). Checklis
 | `claude not found` / auth errors | Install Claude Code and run `claude` once to sign in. Make sure `LEGO_BUILDER_CLAUDE_BIN` is right. |
 | Claude call times out | Raise `LEGO_BUILDER_CLAUDE_TIMEOUT_S`; check your subscription usage limit; re-run the stage (it is re-runnable). |
 | Step boxes cut the wrong area | `01_pages/*.png` vs `01_steps_raw.json`; tune `segment_page.md` (task 3). |
-| Cutouts misplaced | Look at `aligned_image` and `02_masks/`; alignment may have failed (no previous step or too few matches). |
+| Model / parts cut-outs wrong | `04_assets/model_NNN.png` and `part_NNN_K.png`; check `model_bbox` / `callout_bbox` / `landing` for that step in `02_understanding.json` (they come from Claude, refined in `imaging.py`). |
 | Snaps not on beat | `05_beats.json` `beats_s`; tests in `test_timeline.py`. |
 | Remotion cannot find a run | `video/public/runs` symlink, and `06_timeline.json` exists under `data/runs/<run_id>/`. |
 | Media 404 in Studio | Paths must be under `assets/` or inside the run directory. |

@@ -22,7 +22,7 @@ stage: ## Re-run one stage: make stage STAGE=s03_select RUN=<run_id>
 	$(CLI) stage $(STAGE) --run $(RUN)
 
 preview: ## Open Remotion Studio on a run: make preview RUN=<run_id>
-	cd video && RUN_ID=$(RUN) npm run studio
+	cd video && node scripts/link-run.mjs && npx remotion studio src/index.ts --props=public/runs/$(RUN)/06_timeline.json
 
 render: ## Render MP4: make render RUN=<run_id> LEN=30
 	cd video && RUN_ID=$(RUN) LEN=$(LEN) npm run render

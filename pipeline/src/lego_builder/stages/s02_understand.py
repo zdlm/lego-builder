@@ -73,11 +73,14 @@ def run(ctx: StageContext) -> None:
     for prev, cur in zip([None, *raw.steps[:-1]], raw.steps, strict=True):
         cur_img = paths.root / cur.image
         images = [cur_img] if prev is None else [paths.root / prev.image, cur_img]
+        cur_h, cur_w = cv2.imread(str(cur_img)).shape[:2]
         u = ask_json(
             load_prompt(
                 "understand_step",
                 step=str(cur.step_number),
                 prev_step=str(prev.step_number if prev else "0 (empty)"),
+                width=str(cur_w),
+                height=str(cur_h),
             ),
             images,
             StepUnderstanding,

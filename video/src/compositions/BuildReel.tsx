@@ -23,8 +23,8 @@ const renderEvent = (t: Timeline, e: TimelineEvent) => {
 export const BuildReel: React.FC<Timeline> = (t) => {
   const { fps } = useVideoConfig();
   return (
-    <AbsoluteFill style={{ backgroundColor: "#f4f1ea" }}>
-      {t.music ? <Audio src={assetFile(t.music)} /> : null}
+    <AbsoluteFill style={{ background: "radial-gradient(circle at 50% 45%, #ffffff 0%, #e3f3ff 55%, #bfe2fa 100%)" }}>
+      {t.music ? <Audio src={assetFile(t.music)} trimBefore={Math.round(t.music_start_s * fps)} /> : null}
       {t.events.map((e, i) => (
         <Sequence
           key={i}

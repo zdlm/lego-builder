@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "0.2.0"
+SCHEMA_VERSION = "0.4.0"
 
 
 class BBox(BaseModel):
@@ -25,6 +25,11 @@ class BBox(BaseModel):
     h: int
 
 
+class Point(BaseModel):
+    x: int
+    y: int
+
+
 # ---------- s01_extract ----------
 
 
@@ -32,7 +37,9 @@ class RawStep(BaseModel):
     step_number: int = Field(description="Step number as printed in the instructions")
     page: int = Field(description="1-based PDF page index")
     bbox: BBox = Field(description="Where the step sits on the page image")
-    image: str = Field(description="Path to the cropped step image, relative to the run dir")
+    image: str = Field(
+        description="Path to the cropped step image, relative to the run dir"
+    )
 
 
 class StepsRaw(BaseModel):
@@ -40,6 +47,10 @@ class StepsRaw(BaseModel):
     source_pdf: str
     page_count: int
     steps: list[RawStep]
+    final_image: str | None = Field(
+        default=None,
+        description="Crop of the finished-model picture (a page without a step number), if found",
+    )
 
 
 # ---------- s02_understand ----------
@@ -47,21 +58,41 @@ class StepsRaw(BaseModel):
 
 class StepUnderstanding(BaseModel):
     step_number: int
-    new_parts: list[str] = Field(default_factory=list, description="e.g. '1x4 red plate x2'")
-    visual_change: float = Field(ge=0, le=1, description="0 = barely visible, 1 = huge change")
-    is_milestone: bool = Field(description="Shape comes together, sub-assemblies join, etc.")
+    new_parts: list[str] = Field(
+        default_factory=list, description="e.g. '1x4 red plate x2'"
+    )
+    visual_change: float = Field(
+        ge=0, le=1, description="0 = barely visible, 1 = huge change"
+    )
+    is_milestone: bool = Field(
+        description="Shape comes together, sub-assemblies join, etc."
+    )
     milestone_kind: (
-        Literal["shape_forms", "color_block", "mechanism", "subassembly_join", "final"] | None
+        Literal["shape_forms", "color_block", "mechanism", "subassembly_join", "final"]
+        | None
     ) = None
     note: str = Field(default="", description="One-line description of what happens")
-    diff_mask: str | None = Field(default=None, description="Path to mask of newly added region")
-    diff_area: float | None = Field(default=None, ge=0, le=1, description="Fraction of pixels")
+    diff_mask: str | None = Field(
+        default=None, description="Path to mask of newly added region"
+    )
+    diff_area: float | None = Field(
+        default=None, ge=0, le=1, description="Fraction of pixels"
+    )
     aligned_image: str | None = Field(
         default=None,
         description=(
             "This step's image warped onto the previous step's coordinate frame (ORB + "
             "homography), so diff_mask/cutouts line up with the previous step's pixels"
         ),
+    )
+    model_bbox: BBox | None = Field(
+        default=None, description="Assembled model in this step's image (pixels)"
+    )
+    callout_bbox: BBox | None = Field(
+        default=None, description="Parts callout box in this step's image (pixels)"
+    )
+    landing: Point | None = Field(
+        default=None, description="Where the new parts end up on the model (pixels)"
     )
 
 
@@ -89,21 +120,38 @@ class Selection(BaseModel):
 # ---------- s04_assets ----------
 
 
+class Picture(BaseModel):
+    """An RGBA image with a transparent background, relative to the run dir."""
+
+    image: str
+    width: int
+    height: int
+
+
 class StepAsset(BaseModel):
     step_number: int
-    base_image: str = Field(description="Previous-step image the part drops onto")
-    base_width: int = Field(description="Pixel width of base_image, for scaling cutout_bbox")
-    base_height: int = Field(description="Pixel height of base_image, for scaling cutout_bbox")
-    full_image: str = Field(description="This step's full image (end state)")
-    cutout: str | None = Field(default=None, description="RGBA cutout of the new parts")
-    cutout_bbox: BBox | None = Field(
-        default=None, description="In base_image's pixel coordinate frame"
+    full_image: str = Field(description="This step's full panel image (fallback)")
+    model: Picture | None = Field(default=None, description="Model after this step")
+    prev_model: Picture | None = Field(
+        default=None, description="Model before this step"
+    )
+    parts: list[Picture] = Field(
+        default_factory=list, description="New parts cut from the callout"
+    )
+    landing_x: float = Field(
+        default=0.5, ge=0, le=1, description="Fraction of model width"
+    )
+    landing_y: float = Field(
+        default=0.3, ge=0, le=1, description="Fraction of model height"
     )
 
 
 class Assets(BaseModel):
     schema_version: str = SCHEMA_VERSION
     assets: list[StepAsset]
+    final_model: Picture | None = Field(
+        default=None, description="Finished model with a transparent background"
+    )
 
 
 # ---------- s05_beats ----------
@@ -127,6 +175,10 @@ class TimelineEvent(BaseModel):
     duration_s: float
     step_number: int | None = None
     asset: StepAsset | None = None
+    impact_s: float | None = Field(
+        default=None,
+        description="Snap only: when the parts land (on a beat), in video time",
+    )
     sfx: str | None = Field(default=None, description="Path of the click sound to play")
     text: str | None = None
 
@@ -141,5 +193,17 @@ class Timeline(BaseModel):
     height: int = 1920
     length_s: Literal[15, 30, 60]
     music: str
+    music_start_s: float = Field(
+        default=0.0,
+        ge=0,
+        description="Where in the track playback starts (skips beatless intros)",
+    )
     total_steps: int
+    final_image: str | None = Field(
+        default=None,
+        description="Finished-model image for the reveal, relative to the run dir",
+    )
+    final_model: Picture | None = Field(
+        default=None, description="Finished model with a transparent background"
+    )
     events: list[TimelineEvent]

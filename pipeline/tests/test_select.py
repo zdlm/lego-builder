@@ -23,3 +23,13 @@ def test_pick_keeps_final_and_order() -> None:
     body = [s.step_number for s in out[1:]]
     assert body == sorted(body)
     assert len(body) == 10
+
+
+def test_display_stand_after_final_step_is_not_picked() -> None:
+    steps = [_step(i, 0.5) for i in range(1, 26)] + [
+        _step(26, 0.8, "final"),
+        _step(27, 0.9),
+    ]
+    out = pick(steps, 10)
+    assert out[-1].role == "reveal" and out[-1].step_number == 26
+    assert all(s.step_number != 27 for s in out)

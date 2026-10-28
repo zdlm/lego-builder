@@ -2,18 +2,21 @@
 // Keep in sync: if you change one, change the other and bump SCHEMA_VERSION.
 import { staticFile } from "remotion";
 
-export const SCHEMA_VERSION = "0.2.0";
+export const SCHEMA_VERSION = "0.4.0";
 
 export type BBox = { x: number; y: number; w: number; h: number };
 
+/** RGBA image with a transparent background, relative to the run dir. */
+export type Picture = { image: string; width: number; height: number };
+
 export type StepAsset = {
   step_number: number;
-  base_image: string; // relative to the run dir
-  base_width: number; // native pixel size of base_image, for scaling cutout_bbox
-  base_height: number;
-  full_image: string;
-  cutout: string | null;
-  cutout_bbox: BBox | null; // in base_image's pixel coordinate frame
+  full_image: string; // full panel, fallback when no model cut-out
+  model: Picture | null; // model after this step
+  prev_model: Picture | null; // model before this step
+  parts: Picture[]; // new parts cut from the callout
+  landing_x: number; // where the parts land, as a fraction of model width
+  landing_y: number; // ... and of model height
 };
 
 export type TimelineEvent = {
@@ -22,6 +25,7 @@ export type TimelineEvent = {
   duration_s: number;
   step_number: number | null;
   asset: StepAsset | null;
+  impact_s: number | null; // snap only: when the parts land (on a beat), video time
   sfx: string | null; // repo-relative, e.g. assets/sfx/click1.wav
   text: string | null;
 };
@@ -36,7 +40,10 @@ export type Timeline = {
   height: number;
   length_s: 15 | 30 | 60;
   music: string; // repo-relative, must live under assets/
+  music_start_s: number; // where in the track playback starts
   total_steps: number;
+  final_image: string | null; // finished-model image for the reveal, relative to the run dir
+  final_model: Picture | null; // finished model with a transparent background
   events: TimelineEvent[];
 };
 
@@ -57,6 +64,9 @@ export const sampleTimeline: Timeline = {
   height: 1920,
   length_s: 15,
   music: "",
+  music_start_s: 0,
   total_steps: 0,
-  events: [{ kind: "cta", start_s: 0, duration_s: 15, step_number: null, asset: null, sfx: null, text: "Load a run: make preview RUN=<run_id>" }],
+  final_image: null,
+  final_model: null,
+  events: [{ kind: "cta", start_s: 0, duration_s: 15, step_number: null, asset: null, impact_s: null, sfx: null, text: "Load a run: make preview RUN=<run_id>" }],
 };
