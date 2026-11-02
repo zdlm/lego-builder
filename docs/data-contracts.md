@@ -1,6 +1,6 @@
 # Data contracts
 
-Source of truth: `pipeline/src/lego_builder/models.py` (Pydantic). TypeScript mirror for the video side: `video/src/lib/timeline.ts`. Current `SCHEMA_VERSION`: **0.5.0**.
+Source of truth: `pipeline/src/lego_builder/models.py` (Pydantic). TypeScript mirror for the video side: `video/src/lib/timeline.ts`. Current `SCHEMA_VERSION`: **0.7.0**.
 
 To see the exact JSON Schema of any model:
 
@@ -21,9 +21,9 @@ pipeline/.venv/bin/python -c "from lego_builder.models import Timeline; import j
 
 **02_understanding.json — `Understanding`**: `steps[]` of `StepUnderstanding {step_number, new_parts[], visual_change 0–1, is_milestone, milestone_kind, note, diff_mask, diff_area, aligned_image, model_bbox, callout_bbox, landing}`. `aligned_image` is the step's image warped onto the previous step's coordinate frame (ORB + homography in `s02_understand.align_image`); it is `None` when there's no previous step or alignment failed for lack of matches. `model_bbox` (main model only), `callout_bbox` (parts callout) and `landing` (`Point {x, y}`, where the new parts end up) are from Claude, in pixels of the step image; any of them may be `None`. `milestone_kind: "final"` marks the step that completes the main model; later steps (e.g. a display stand) are left out by s03.
 
-**03_selection.json — `Selection`**: `target_length_s` (15/30/60), `selected[]` of `SelectedStep {step_number, score, reason, role: hook|build|climax|reveal}` in playback order.
+**03_selection.json — `Selection`**: `target_length_s` (seconds; 15/30/60 are tuned, any value works), `selected[]` of `SelectedStep {step_number, score, reason, role: hook|build|climax|reveal}` in playback order.
 
-**04_assets.json — `Assets`**: `assets[]` of `StepAsset {step_number, full_image, model, prev_model, parts[], landing_x, landing_y}`, plus `final_model`. `model`, `prev_model`, `parts[]` and `final_model` are `Picture {image, width, height}`: PNGs with a transparent background (`04_assets/model_NNN.png`, `part_NNN_K.png`, `final_model.png`). `model` is the model after this step, `prev_model` before it; `parts` are the new parts cut from the callout, left to right; `landing_x`/`landing_y` (0–1) say where on `model` the parts land. All pictures keep the instruction drawing's pixel scale, so one display scale fits every step. See ADR 0003.
+**04_assets.json — `Assets`**: `assets[]` of `StepAsset {step_number, full_image, model, prev_model, anchor_model, parts[], landing_x, landing_y}`, plus `final_model`. `model`, `prev_model`, `anchor_model`, `parts[]` and `final_model` are `Picture {image, width, height}`: PNGs with a transparent background (`04_assets/model_NNN.png`, `part_NNN_K.png`, `final_model.png`). `model` is the model after this step, `prev_model` before it; `anchor_model` is set only for steps that build a small sub-assembly (its model is under 65% of the largest model so far) and is the main model as it stood before the step, so the video can keep it on screen; `parts` are the new parts cut from the callout, left to right; `landing_x`/`landing_y` (0–1) say where on `model` the parts land. All pictures keep the instruction drawing's pixel scale, so one display scale fits every step. See ADR 0003.
 
 **05_beats.json — `Beats`**: `music`, `tempo_bpm`, `duration_s`, `beats_s[]`, `downbeats_s[]`.
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from lego_builder.assembly import anchor_steps
 from lego_builder.imaging import cut_model, cut_parts
 from lego_builder.jsonio import read_model, write_model
 from lego_builder.models import (
@@ -62,6 +63,7 @@ def run(ctx: StageContext) -> None:
     und = {u.step_number: u for u in read_model(paths.understanding, Understanding).steps}
     sel = read_model(paths.selection, Selection)
     order = sorted(raw)
+    anchors = anchor_steps(order, und)
 
     models: dict[int, tuple[Picture, int, int] | None] = {}
 
@@ -85,7 +87,15 @@ def run(ctx: StageContext) -> None:
             continue
         idx = order.index(n)
         model = model_of(n)
-        prev = model_of(order[idx - 1]) if idx > 0 else None
+        before = order[idx - 1] if idx > 0 else None
+        if before is not None:
+            if n in anchors and before not in anchors:
+                before = None  # a sub-assembly starts from nothing, not from the main model
+            elif n not in anchors and before in anchors:
+                before = anchors[before]  # joining the sub-assembly: start from the main model
+        prev = model_of(before) if before is not None else None
+        main_step = anchors.get(n)
+        anchor = model_of(main_step) if main_step is not None else None
         u = und.get(n)
 
         parts: list[Picture] = []
@@ -105,6 +115,7 @@ def run(ctx: StageContext) -> None:
                 full_image=raw[n].image,
                 model=model[0] if model else None,
                 prev_model=prev[0] if prev else None,
+                anchor_model=anchor[0] if anchor else None,
                 parts=parts,
                 landing_x=lx,
                 landing_y=ly,

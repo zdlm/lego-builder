@@ -3,6 +3,8 @@
 Inputs:  02_understanding.json
 Outputs: 03_selection.json (Selection)
 
+Sub-assembly steps (small model boxes, see `assembly.py`) are picked only when a bucket has no
+main-model step, so the video stays on the main model.
 The scoring is a plain function (`score_step`) so it can be unit-tested and tuned without the LLM.
 An optional Claude pass re-ranks the shortlist and explains each pick.
 """
@@ -12,6 +14,7 @@ from __future__ import annotations
 import json
 from typing import Literal
 
+from lego_builder.assembly import anchor_steps
 from lego_builder.jsonio import read_model, write_model
 from lego_builder.llm.client import ask_json, load_prompt
 from lego_builder.models import (
@@ -27,6 +30,14 @@ Role = Literal["hook", "build", "climax", "reveal"]
 # How many snap steps each video length holds (tuned by eye; s06 fits them to the beats).
 # Roughly one snap per beat at ~85-170 BPM in the snap window; s06 drops extras that don't fit.
 TARGET_COUNTS: dict[int, int] = {15: 12, 30: 28, 60: 60}
+
+SUB_PENALTY = 0.3  # a sub-assembly step loses to a main-model step in the same bucket
+
+
+def target_count(length_s: int) -> int:
+    """Snap steps for a video of any length: the tuned counts, else about one per second."""
+    return TARGET_COUNTS.get(length_s, max(1, length_s))
+
 
 MILESTONE_BONUS: dict[str, float] = {
     "final": 0.5,
@@ -75,16 +86,21 @@ def pick(steps: list[StepUnderstanding], count: int) -> list[SelectedStep]:
     count = min(count, len(ordered))
     final = ordered[-1]
     rest = ordered[:-1]
+    subs = anchor_steps([u.step_number for u in ordered], {u.step_number: u for u in ordered})
+
+    def preference(u: StepUnderstanding) -> float:
+        return score_step(u) - (SUB_PENALTY if u.step_number in subs else 0.0)
+
     chosen: list[StepUnderstanding] = []
     buckets = max(count - 1, 1)
     for i in range(buckets):
         lo = i * len(rest) // buckets
         hi = (i + 1) * len(rest) // buckets
         if lo < hi:
-            chosen.append(max(rest[lo:hi], key=score_step))
+            chosen.append(max(rest[lo:hi], key=preference))
     chosen.append(final)
 
-    hook = max(chosen[:-1] or chosen, key=score_step)
+    hook = max(chosen[:-1] or chosen, key=preference)
     climax_from = int(len(chosen) * 0.75)
     out: list[SelectedStep] = [
         SelectedStep(
@@ -106,7 +122,7 @@ def run(ctx: StageContext) -> None:
     paths = ctx.paths.ensure()
     und = read_model(paths.understanding, Understanding)
     steps = main_build(und.steps)
-    count = TARGET_COUNTS[ctx.length_s]
+    count = target_count(ctx.length_s)
     selected = pick(steps, count)
 
     if ctx.use_llm_ranking:

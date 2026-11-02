@@ -35,7 +35,7 @@ def _ctx(
         music=music,
         set_name=set_name,
         set_number=set_number,
-        length_s=length,  # type: ignore[arg-type]
+        length_s=length,
         sfx=sfx,
         use_llm_ranking=not no_llm_rank,
         cta_text=cta_text,
@@ -48,7 +48,7 @@ def run(
     music: Path = typer.Option(..., exists=True, help="Music track"),
     set_name: str = typer.Option("LEGO Set"),
     set_number: str | None = typer.Option(None),
-    length: int = typer.Option(30, help="15, 30 or 60"),
+    length: int = typer.Option(30, help="Video length in seconds (15, 30 and 60 are tuned)"),
     run_id: str | None = typer.Option(None, help="Defaults to <pdf-name>-<timestamp>"),
     sfx_dir: Path = typer.Option(Path("assets/sfx")),
     no_llm_rank: bool = typer.Option(False, help="Use heuristic selection only"),

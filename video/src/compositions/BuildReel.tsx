@@ -29,7 +29,7 @@ export const BuildReel: React.FC<Timeline> = (t) => {
     <AbsoluteFill
       style={{
         fontFamily: FONT,
-        background: "radial-gradient(circle at 50% 45%, #ffffff 0%, #e3f3ff 55%, #bfe2fa 100%)",
+        background: "radial-gradient(circle at 50% 45%, #ffffff 0%, #e3f3ff 55%, #bfe2fa 100%)"
       }}
     >
       <div

@@ -1,15 +1,19 @@
 // Shared layout for showing models: one fixed "stage" so the model never jumps between steps.
 import type { Picture, Timeline, TimelineEvent } from "./timeline";
 
-export const STAGE = { centerX: 540, baseline: 1420, maxWidth: 940, maxHeight: 1080 };
+export type Stage = { centerX: number; baseline: number; maxWidth: number; maxHeight: number };
+export const STAGE: Stage = { centerX: 540, baseline: 1420, maxWidth: 940, maxHeight: 1080 };
+// Sub-assembly steps: the main model stays up top, the small piece is built below it.
+export const ANCHOR_STAGE: Stage = { centerX: 540, baseline: 860, maxWidth: 900, maxHeight: 560 };
+export const SUB_STAGE: Stage = { centerX: 540, baseline: 1440, maxWidth: 860, maxHeight: 480 };
 export const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 // Instruction drawings are rasterised at ~200 dpi; zooming further gets visibly soft.
 const MAX_ZOOM = 2.6;
 
-/** Scale that fits a single picture on the stage. */
-export const fitScale = (p: Picture): number =>
-    Math.min(STAGE.maxWidth / p.width, STAGE.maxHeight / p.height, MAX_ZOOM);
+/** Scale that fits a single picture on a stage. */
+export const fitScale = (p: Picture, stage: Stage = STAGE): number =>
+    Math.min(stage.maxWidth / p.width, stage.maxHeight / p.height, MAX_ZOOM);
 
 /** Per snap: the largest scale at which every model so far fits, so the camera only pulls back. */
 const cameraTargets = (t: Timeline): Map<TimelineEvent, number> => {
@@ -36,10 +40,14 @@ export const cameraScale = (t: Timeline, event: TimelineEvent, progress: number)
     return from + (to - from) * progress;
 };
 
-/** Top-left of a picture standing on the stage baseline, horizontally centred. */
-export const standOnStage = (p: Picture, scale: number): { left: number; top: number } => ({
-    left: STAGE.centerX - (p.width * scale) / 2,
-    top: STAGE.baseline - p.height * scale,
+/** Top-left of a picture standing on a stage baseline, horizontally centred. */
+export const standOnStage = (
+    p: Picture,
+    scale: number,
+    stage: Stage = STAGE,
+): { left: number; top: number } => ({
+    left: stage.centerX - (p.width * scale) / 2,
+    top: stage.baseline - p.height * scale,
 });
 
 export const MODEL_SHADOW = "drop-shadow(0 18px 22px rgba(0, 40, 80, 0.22))";

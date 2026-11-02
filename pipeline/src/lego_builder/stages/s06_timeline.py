@@ -166,7 +166,7 @@ def build_timeline(
         run_id=run_id,
         set_name=set_name,
         set_number=set_number,
-        length_s=length_s,  # type: ignore[arg-type]
+        length_s=length_s,
         music=beats.music,
         music_start_s=offset,
         # Count up to the step that finishes the model, not extras such as a display stand.

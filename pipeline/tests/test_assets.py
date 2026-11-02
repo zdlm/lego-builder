@@ -3,6 +3,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from lego_builder.assembly import anchor_steps
 from lego_builder.jsonio import read_model, write_model
 from lego_builder.models import (
     Assets,
@@ -20,6 +21,24 @@ from lego_builder.stages import s04_assets
 from lego_builder.stages.base import StageContext
 
 PAGE = (252, 236, 211)
+
+
+def _und(n: int, w: int, h: int) -> StepUnderstanding:
+    box = BBox(x=0, y=0, w=w, h=h)
+    return StepUnderstanding(step_number=n, visual_change=0.5, is_milestone=False, model_bbox=box)
+
+
+def test_anchor_steps_marks_small_models_with_last_main_step() -> None:
+    und = {
+        1: _und(1, 100, 100),
+        2: _und(2, 400, 400),
+        3: _und(3, 80, 80),  # sub-assembly: 4% of the largest so far
+        4: _und(4, 90, 90),
+        5: _und(5, 380, 380),
+        6: _und(6, 60, 60),
+        7: StepUnderstanding(step_number=7, visual_change=0.5, is_milestone=False),
+    }
+    assert anchor_steps([1, 2, 3, 4, 5, 6, 7], und) == {3: 2, 4: 2, 6: 5}
 
 
 def _step(path: Path, with_callout: bool) -> None:

@@ -22,6 +22,8 @@ Claim a task by writing your name or model and the date in the **Owner** column 
 | 16 | Remove instruction arrows that point into the model from `model_NNN.png` (e.g. step 20) | pipeline/s02, s04 | – | s02 also returns arrow boxes; s04 clears/inpaints them; no red arrows visible on the demo run | |
 | 17 | Sharper cut-outs: crop models/parts from pages rendered at higher DPI (boxes scaled) | pipeline/s01, s04 | – | Close-ups of early steps no longer look soft at 1080×1920; no extra Claude calls | |
 | 18 | Transition for view-angle changes (model flipped or turned, e.g. steps 22–23) | video, pipeline/s02 | – | s02 flags "view changed"; `SnapStep` uses a quick flip/whip instead of a hard cut | |
+| 19 | Full-length video fitted to a whole track (204 s, 6591919 + Binks' Sake) | pipeline, video | – | `length_s` accepts any number (schema 0.6.0); `make render RUN=6591919-demo LEN=204` gives an MP4 as long as the music | copilot 2026-10-29 |
+| 20 | Keep the main model on screen while a sub-assembly is built (`anchor_model`, schema 0.7.0); then favour main-model steps in s03 and animate sub-assembly joins | pipeline/s04, s03, video | 19 | On `6591919-demo` no snap shows only a tiny piece without the main model above it | copilot 2026-10-30 |
 
 ## In progress
 

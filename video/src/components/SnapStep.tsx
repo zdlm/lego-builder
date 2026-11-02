@@ -1,17 +1,18 @@
 import { AbsoluteFill, Audio, Easing, Img, interpolate, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
-import { cameraScale, MODEL_SHADOW, standOnStage } from "../lib/stage";
+import { ANCHOR_STAGE, cameraScale, fitScale, MODEL_SHADOW, standOnStage, STAGE, SUB_STAGE, type Stage } from "../lib/stage";
 import { assetFile, runFile, type Picture, type Timeline } from "../lib/timeline";
 import type { EventProps } from "./types";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-const Model: React.FC<{ timeline: Timeline; pic: Picture; scale: number; squash?: number }> = ({
+const Model: React.FC<{ timeline: Timeline; pic: Picture; scale: number; squash?: number; stage?: Stage }> = ({
   timeline,
   pic,
   scale,
   squash = 1,
+  stage = STAGE,
 }) => {
-  const { left, top } = standOnStage(pic, scale);
+  const { left, top } = standOnStage(pic, scale, stage);
   return (
     <Img
       src={runFile(timeline, pic.image)}
@@ -23,7 +24,7 @@ const Model: React.FC<{ timeline: Timeline; pic: Picture; scale: number; squash?
         height: pic.height * scale,
         transformOrigin: "50% 100%",
         transform: `scale(${2 - squash}, ${squash})`,
-        filter: MODEL_SHADOW,
+        filter: MODEL_SHADOW
       }}
     />
   );
@@ -64,8 +65,13 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
 
   const length = Math.max(1, Math.round(event.duration_s * fps));
   const camera = interpolate(frame, [0, length], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const scale = cameraScale(timeline, event, camera);
-  const { left, top } = standOnStage(a.model, scale);
+  // A small sub-assembly is built below the main model, which stays put.
+  const anchored = Boolean(a.anchor_model);
+  const stage = anchored ? SUB_STAGE : STAGE;
+  const scale = anchored
+    ? 0.9 * Math.min(fitScale(a.model, SUB_STAGE), a.prev_model ? fitScale(a.prev_model, SUB_STAGE) : Infinity)
+    : cameraScale(timeline, event, camera);
+  const { left, top } = standOnStage(a.model, scale, stage);
   const target = {
     x: left + a.landing_x * a.model.width * scale,
     y: top + a.landing_y * a.model.height * scale,
@@ -78,11 +84,18 @@ export const SnapStep: React.FC<EventProps> = ({ timeline, event }) => {
   const fall = interpolate(frame, [0, Math.max(impact, 1)], [0, 1], { ...clamp, easing: Easing.in(Easing.quad) });
 
   return (
-    <AbsoluteFill style={{ transform: `translateY(${shake}px)` }}>
+    <AbsoluteFill
+      style={{
+        transform: `translateY(${shake}px)`
+      }}
+    >
+      {a.anchor_model ? (
+        <Model timeline={timeline} pic={a.anchor_model} scale={0.95 * fitScale(a.anchor_model, ANCHOR_STAGE)} stage={ANCHOR_STAGE} />
+      ) : null}
       {landed ? (
-        <Model timeline={timeline} pic={a.model} scale={scale} squash={squash} />
+        <Model timeline={timeline} pic={a.model} scale={scale} squash={squash} stage={stage} />
       ) : a.prev_model ? (
-        <Model timeline={timeline} pic={a.prev_model} scale={scale} />
+        <Model timeline={timeline} pic={a.prev_model} scale={scale} stage={stage} />
       ) : null}
 
       {!landed

@@ -2,7 +2,7 @@
 // Keep in sync: if you change one, change the other and bump SCHEMA_VERSION.
 import { staticFile } from "remotion";
 
-export const SCHEMA_VERSION = "0.5.0";
+export const SCHEMA_VERSION = "0.7.0";
 
 export type BBox = { x: number; y: number; w: number; h: number };
 
@@ -15,6 +15,7 @@ export type StepAsset = {
   model: Picture | null; // model after this step
   prev_model: Picture | null; // model before this step
   parts: Picture[]; // new parts cut from the callout
+  anchor_model: Picture | null; // main model kept on screen while a small sub-assembly is built
   landing_x: number; // where the parts land, as a fraction of model width
   landing_y: number; // ... and of model height
 };
@@ -39,7 +40,7 @@ export type Timeline = {
   fps: number;
   width: number;
   height: number;
-  length_s: 15 | 30 | 60;
+  length_s: number;
   music: string; // repo-relative, must live under assets/
   music_start_s: number; // where in the track playback starts
   total_steps: number;

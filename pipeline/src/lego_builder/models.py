@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "0.5.0"
+SCHEMA_VERSION = "0.7.0"
 
 
 class BBox(BaseModel):
@@ -100,7 +100,7 @@ class SelectedStep(BaseModel):
 
 class Selection(BaseModel):
     schema_version: str = SCHEMA_VERSION
-    target_length_s: Literal[15, 30, 60]
+    target_length_s: int
     selected: list[SelectedStep] = Field(description="In playback order")
 
 
@@ -121,6 +121,13 @@ class StepAsset(BaseModel):
     model: Picture | None = Field(default=None, description="Model after this step")
     prev_model: Picture | None = Field(default=None, description="Model before this step")
     parts: list[Picture] = Field(default_factory=list, description="New parts cut from the callout")
+    anchor_model: Picture | None = Field(
+        default=None,
+        description=(
+            "Main model as it stood before this step; set only when this step builds a small "
+            "sub-assembly, so the video keeps the main model on screen"
+        ),
+    )
     landing_x: float = Field(default=0.5, ge=0, le=1, description="Fraction of model width")
     landing_y: float = Field(default=0.3, ge=0, le=1, description="Fraction of model height")
 
@@ -173,7 +180,7 @@ class Timeline(BaseModel):
     fps: int = 30
     width: int = 1080
     height: int = 1920
-    length_s: Literal[15, 30, 60]
+    length_s: int
     music: str
     music_start_s: float = Field(
         default=0.0,

@@ -1,5 +1,20 @@
-from lego_builder.models import StepUnderstanding
-from lego_builder.stages.s03_select import pick, score_step
+from lego_builder.models import BBox, StepUnderstanding
+from lego_builder.stages.s03_select import pick, score_step, target_count
+
+
+def test_pick_prefers_main_model_over_sub_assembly() -> None:
+    def step(n: int, change: float, size: int, milestone: str | None = None) -> StepUnderstanding:
+        return StepUnderstanding(
+            step_number=n,
+            visual_change=change,
+            is_milestone=milestone is not None,
+            milestone_kind=milestone,  # type: ignore[arg-type]
+            model_bbox=BBox(x=0, y=0, w=size, h=size),
+        )
+
+    steps = [step(1, 0.5, 400), step(2, 0.9, 50), step(3, 0.5, 400, "final")]
+    picked = [s.step_number for s in pick(steps, 2) if s.role != "hook"]
+    assert picked == [1, 3]
 
 
 def _step(n: int, change: float, milestone: str | None = None) -> StepUnderstanding:
@@ -9,6 +24,11 @@ def _step(n: int, change: float, milestone: str | None = None) -> StepUnderstand
         is_milestone=milestone is not None,
         milestone_kind=milestone,  # type: ignore[arg-type]
     )
+
+
+def test_target_count_tuned_and_custom_lengths() -> None:
+    assert target_count(30) == 28
+    assert target_count(204) == 204
 
 
 def test_milestone_scores_higher() -> None:
